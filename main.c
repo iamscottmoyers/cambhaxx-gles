@@ -14,8 +14,13 @@
 /* rotation value */
 static GLfloat angle = 0.0;
 
+typedef struct col_t {
+  GLubyte red, green, blue, alpha;
+} col_t;
+
 typedef struct pos_t {
 	GLfloat x, y, z;
+  col_t c;
 } pos_t;
 
 typedef struct item_t {
@@ -67,6 +72,7 @@ static dude_t *createDude(void) {
 
 	 */
 
+#if 0
 	const pos_t b[] = {
 		{-1, 0, 1},
 		{-1, 0, 0},
@@ -93,6 +99,9 @@ static dude_t *createDude(void) {
 		{2, 4.0, 0},
 		{3, 3.5, 0}
 	};
+#else
+	#include "data/b2.cotton"
+#endif
 
 	dude_t *d = (dude_t *)calloc(1, sizeof(dude_t));
 	if(d == NULL) {
@@ -136,15 +145,6 @@ static void drawCube(void)
 	                           1.0f, 1.0f, 1.0f, 1.0f,
 	                           0.0f, 1.0f, 1.0f, 1.0f };*/
 
-	static GLfloat colors[] = {1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f };
-
 	static GLubyte indices[] = {
 		0, 1, 2, 0, 2, 3, /* FRONT */
 		7, 6, 5, 7, 5, 4, /* BACK */
@@ -177,20 +177,32 @@ static void drawCube(void)
 		glPopMatrix();
 	}
 #else
-
-	glColorPointer(4, GL_FLOAT, 0 , colors);
 	glVertexPointer(3, GL_FLOAT, 0, vertices);
 	glDrawElements(GL_TRIANGLES, sizeof( indices ) / sizeof( indices[0] ), GL_UNSIGNED_BYTE, indices);
 #endif
 }
 
 static void drawDude(dude_t *d) {
-	unsigned int i;
-	for(i=0;i<d->dude_item.count;++i) {
+  unsigned int i, j;
+  for(i=0;i<d->dude_item.count;++i) {
+    /* TODO:
+       figure out a better way of doing this color setting.
+       i think that using GLubyte rather than the GLfloat is fine for the colors?
+     */
+    GLubyte *colors = (GLubyte *)calloc(32, sizeof(GLubyte));
+    if(colors == NULL) {
+      fprintf(stderr, "Error: calloc colors\n");
+      exit(-1);
+    }
+    for(j=0;j<8;j++) {
+      memcpy(colors+(j * 4), &(d->dude_item.blocks[i].c), 4);
+    }
 		glPushMatrix();
 		glTranslatef(d->dude_item.blocks[i].x, d->dude_item.blocks[i].y, d->dude_item.blocks[i].z);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0 , colors);
 		drawCube();
 		glPopMatrix();
+		free(colors);
 	}
 }
 
