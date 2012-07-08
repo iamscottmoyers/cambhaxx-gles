@@ -100,7 +100,7 @@ static dude_t *createDude(void) {
 		{3, 3.5, 0}
 	};
 #else
-	#include "data/b2.cotton"
+	#include "data/gir.cotton"
 #endif
 
 	dude_t *d = (dude_t *)calloc(1, sizeof(dude_t));
