@@ -1,2 +1,4 @@
 *~
+*.o
+dude
 .DS_Store
