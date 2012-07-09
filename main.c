@@ -7,10 +7,13 @@
 #if defined(__APPLE__) || defined(MACOSX)
 # include <OpenGL/gl.h>
 # include <GLUT/glut.h>
-#elif !defined(USE_GTK)
-# include <GL/glut.h>
+#elif defined(USE_GTK)
+# include <gtk/gtk.h>
+# include <gtk/gtkgl.h>
+# include <GL/gl.h>
 #else
 # include <GL/gl.h>
+# include <GL/glut.h>
 #endif
 
 
@@ -209,6 +212,8 @@ static void drawDude(dude_t *d) {
 	}
 }
 
+
+
 static void display (void)
 {
 	glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -255,17 +260,87 @@ void reshape(int w, int h)
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-#if defined(USE_GTK)
-# warning TODO
-#else
+#if !defined(USE_GTK)
 	gluPerspective(60, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
 #endif
 	glMatrixMode(GL_MODELVIEW);
 }
 
+#if defined(USE_GTK)
+static gboolean rotate(gpointer user_data)
+{
+	GtkWidget *drawing_area = GTK_WIDGET(user_data);
+
+	/* Could tweak angle from here? */
+	/* g_print("rotate\n"); */
+	gdk_window_invalidate_rect(drawing_area->window, &drawing_area->allocation, FALSE);
+	gdk_window_process_updates(drawing_area->window, FALSE);
+	return TRUE;
+}
+
+static gboolean expose(GtkWidget *drawing_area, GdkEventExpose *event, gpointer user_data)
+{
+	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
+	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
+
+	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
+		printf("Can't start drawable :(\n");
+		exit(1);
+	}
+
+
+	/* Do drawing stuff */
+	/* g_print("expose\n"); */
+	display();
+	
+	/* Finish up */
+	if (gdk_gl_drawable_is_double_buffered(gl_dbl))
+		gdk_gl_drawable_swap_buffers(gl_dbl);
+	else
+		glFlush();
+
+	gdk_gl_drawable_gl_end(gl_dbl);
+
+	return TRUE;
+}
+
+/* This is the gtk way of the window changing size */	
+static gboolean configure(GtkWidget *drawing_area, GdkEventConfigure *event,
+                          gpointer user_data)
+{
+	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
+	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
+
+	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
+		printf("Can't start drawable :(\n");
+		exit(1);
+	}
+
+	/* Get viewport size */
+	glLoadIdentity();
+	glViewport(0,0, drawing_area->allocation.width, drawing_area->allocation.height);
+
+	/* I'm a little confused as gluPerspective does a glFrustrum based on a glOrtho
+         * so I might be messing things up a bit here */		
+	glOrtho(-10,10,-10,10,-20050,10000);
+	glEnable(GL_BLEND);
+
+	glMatrixMode(GL_PROJECTION);
+	glMatrixMode(GL_MODELVIEW);
+	
+	gdk_gl_drawable_gl_end(gl_dbl);	
+
+	return TRUE;
+}
+#endif
+
 int main(int argc, char * argv[]) {
 #if defined(USE_GTK)
-# warning TODO
+	GtkWidget *window;
+	GtkWidget *drawing_area;
+	GdkGLConfig *gl_config;
+
+	gtk_init(&argc, &argv);
 #else
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
@@ -274,7 +349,29 @@ int main(int argc, char * argv[]) {
 
 
 #if defined(USE_GTK)
-# warning TODO
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
+	drawing_area = gtk_drawing_area_new();
+
+	gtk_container_add(GTK_CONTAINER(window), drawing_area);
+	g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+	gtk_widget_set_events(drawing_area, GDK_EXPOSURE_MASK);
+	gtk_widget_show(window);
+
+	gl_config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB |
+					      GDK_GL_MODE_DEPTH |
+					      GDK_GL_MODE_DOUBLE);
+
+	if (!gl_config) {
+		printf("Messed up the config :(\n");
+		exit(1);
+	}
+	
+	if (!gtk_widget_set_gl_capability(drawing_area, gl_config, NULL, TRUE,
+                                          GDK_GL_RGBA_TYPE)) {
+		printf("Couldn't get capabilities we needed :(\n");
+		exit(1);
+	}
 #else
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(100, 100);
@@ -287,7 +384,15 @@ int main(int argc, char * argv[]) {
 	glEnableClientState(GL_COLOR_ARRAY);
 
 #if defined(USE_GTK)
-# warning TODO
+	g_signal_connect(drawing_area, "configure-event",
+                         G_CALLBACK(configure), NULL);
+	g_signal_connect(drawing_area, "expose-event",
+                         G_CALLBACK(expose), NULL);
+	gtk_widget_show_all(window);
+
+	g_timeout_add(1000/60, rotate, drawing_area);
+	gtk_main();
+
 #else
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
@@ -296,5 +401,6 @@ int main(int argc, char * argv[]) {
 #endif
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
+	free(dude);
 	return 0;
 }
