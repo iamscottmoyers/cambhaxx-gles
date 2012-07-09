@@ -3,13 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #if defined(__APPLE__) || defined(MACOSX)
 # include <OpenGL/gl.h>
 # include <GLUT/glut.h>
+#elif !defined(USE_GTK)
+# include <GL/glut.h>
 #else
 # include <GL/gl.h>
-# include <GL/glut.h>
 #endif
+
 
 /* rotation value */
 static GLfloat angle = 0.0;
@@ -211,7 +214,12 @@ static void display (void)
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
+		
+#if defined(USE_GTK)
+# warning TODO
+#else
 	gluLookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+#endif
 	glRotatef(angle, 1.0, 0.0, 0.0);
 	glRotatef(angle, 0.0, 1.0, 0.0);
 	glRotatef(angle, 0.0, 0.0, 0.0);
@@ -247,29 +255,45 @@ void reshape(int w, int h)
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+#if defined(USE_GTK)
+# warning TODO
+#else
 	gluPerspective(60, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
+#endif
 	glMatrixMode(GL_MODELVIEW);
 }
 
 int main(int argc, char * argv[]) {
+#if defined(USE_GTK)
+# warning TODO
+#else
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
-
+#endif
 	dude = createDude();
 
+
+#if defined(USE_GTK)
+# warning TODO
+#else
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(100, 100);
 	glutCreateWindow("loads of rotating dudes");
+#endif
 
 	glEnable( GL_DEPTH_TEST );
 	glFrontFace(GL_CW);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
+#if defined(USE_GTK)
+# warning TODO
+#else
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutIdleFunc(display);
 	glutMainLoop();
+#endif
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 	return 0;
