@@ -98,7 +98,7 @@ static dude_t *createDude(void) {
 	return d;
 }
 
-void destroyDude( dude_t *d )
+static void destroyDude( dude_t *d )
 {
 	free( d->dude_item.blocks );
 	free( d );
