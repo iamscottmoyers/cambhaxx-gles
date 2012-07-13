@@ -1,5 +1,5 @@
 /* afhYeSdYibehpahiaheShUhaefWfhahe */
-const pos_t b[] = {
+const pos_t dude_b[] = {
 	{-1, 0, 1, {223, 31, 31, 0} /* #df1f1f */},
 	{-3, 0, 1, {223, 31, 31, 0} /* #df1f1f */},
 	{-3, 0, -2, {223, 31, 31, 0} /* #df1f1f */},

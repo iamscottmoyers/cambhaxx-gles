@@ -20,7 +20,11 @@
 # include <GLUT/glut.h>
 #endif
 
+/** Removes unused variable warnings. */
 #define UNUSED(_var) ((void)(_var))
+
+/** Returns the number of elements in an array. */
+#define NELEMS(_arr) (sizeof((_arr))/sizeof((_arr)[0]))
 
 /** Default window width */
 #define DEFAULT_WIN_WIDTH (800)
@@ -50,34 +54,89 @@ typedef struct dude_t {
 	item_t dude_item;
 } dude_t;
 
-static dude_t *createDude(void) {
-	#include "data/gir.cotton"
+typedef struct model_t {
+	dude_t *b;
+	pos_t b_pos;
+
+	dude_t *b2;
+	pos_t b2_pos;
+
+	dude_t *gir;
+	pos_t gir_pos;
+
+	dude_t *test;
+	pos_t test_pos;
+} model_t;
+
+
+static void destroyDude( dude_t *d )
+{
+	if(d != NULL) {
+		free(d->dude_item.blocks);
+		free(d);
+	}
+}
+
+static dude_t *createDude(const pos_t dude[], size_t size) {
 
 	dude_t *d = (dude_t *)calloc(1, sizeof(dude_t));
 	if(d == NULL) {
 		return NULL;
 	}
-	d->dude_item.blocks = (pos_t *)calloc(sizeof(b)/sizeof(b[0]), sizeof(pos_t));
+	d->dude_item.blocks = malloc(size);
 	if(d->dude_item.blocks == NULL) {
 		free(d);
 		return NULL;
 	}
-	d->dude_item.count = sizeof(b) / sizeof(b[0]);
+	d->dude_item.count = size / sizeof(pos_t);
+	memcpy(d->dude_item.blocks, dude, size);
 
-	memcpy(d->dude_item.blocks, b, sizeof(b));
 	return d;
 }
 
-static void destroyDude( dude_t *d )
+#include "data/b.cotton"
+#include "data/b2.cotton"
+#include "data/gir.cotton"
+#include "data/test.cotton"
+
+static void destroyModel( model_t *m )
 {
-	if( d != NULL )
-	{
-		free( d->dude_item.blocks );
-		free( d );
+	if(m != NULL) {
+		destroyDude(m->b);
+		destroyDude(m->b2);
+		destroyDude(m->gir);
+		destroyDude(m->test);
+		free(m);
 	}
 }
 
-static dude_t *dude;
+static model_t *createModel(void) {
+	model_t *m = malloc( sizeof( model_t ) );
+
+	if(m != NULL) {
+		m->b = createDude(dude_b, sizeof(dude_b));
+		m->b_pos.x = 0.0f; m->b_pos.y = 0.0f; m->b_pos.z = 0.0f;
+
+		m->b2 = createDude(dude_b2, sizeof(dude_b2));
+		m->b2_pos.x = 0.0f; m->b2_pos.y = 10.0f; m->b2_pos.z = 0.0f;
+
+		m->gir = createDude(dude_gir, sizeof(dude_gir));
+		m->gir_pos.x = 0.0f; m->gir_pos.y = 0.0f; m->gir_pos.z = 10.0f;
+
+		m->test = createDude(dude_test, sizeof(dude_test));
+		m->test_pos.x = 10.0f; m->test_pos.y = 0.0f; m->test_pos.z = 0.0f;
+
+		if((m->b == NULL) || (m->b2 == NULL) ||
+		   (m->gir == NULL) || (m->test == NULL)) {
+			destroyModel(m);
+			m = NULL;
+		}
+	}
+
+	return m;
+}
+
+static model_t *model;
 #define M -0.5
 #define P 0.5
 
@@ -104,10 +163,11 @@ static void drawCube(void)
 	};
 
 	glVertexPointer(3, GL_FLOAT, 0, vertices);
-	glDrawElements(GL_TRIANGLES, sizeof( indices ) / sizeof( indices[0] ), GL_UNSIGNED_BYTE, indices);
+	glDrawElements(GL_TRIANGLES, NELEMS(indices), GL_UNSIGNED_BYTE, indices);
 }
 
-static void drawDude(dude_t *d) {
+static void drawDude(dude_t *d)
+{
 	unsigned int i, j;
 
 	/* TODO:
@@ -128,10 +188,31 @@ static void drawDude(dude_t *d) {
 	}
 }
 
+static void drawModel(model_t *m)
+{
+	glPushMatrix();
+	glTranslatef(m->b_pos.x, m->b_pos.y, m->b_pos.z);
+	drawDude(m->b);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(m->b2_pos.x, m->b2_pos.y, m->b2_pos.z);
+	drawDude(m->b2);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(m->gir_pos.x, m->gir_pos.y, m->gir_pos.z);
+	drawDude(m->gir);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(m->test_pos.x, m->test_pos.y, m->test_pos.z);
+	drawDude(m->test);
+	glPopMatrix();
+}
+
 static void display(void)
 {
-	unsigned int i;
-
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -143,13 +224,7 @@ static void display(void)
 
 	glScalef(0.25,0.25,0.25);
 
-	/* Set reference point */
-	glTranslatef(-8*50, 0.0, 0.0);
-	for(i=0;i<100;i++) {
-		glTranslatef(8, 0.0, 0.0);
-		drawDude(dude);
-	}
-
+	drawModel(model);
 	glFlush();
 }
 
@@ -270,7 +345,7 @@ int main(int argc, char * argv[]) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
 #endif
-	dude = createDude();
+	model = createModel();
 
 #if USE_GTK == 1
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
@@ -325,6 +400,6 @@ int main(int argc, char * argv[]) {
 #endif
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
-	destroyDude(dude);
+	destroyModel(model);
 	return 0;
 }
