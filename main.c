@@ -26,6 +26,8 @@
 #define DEFAULT_WIN_WIDTH (800)
 /** Default window height */
 #define DEFAULT_WIN_HEIGHT (600)
+/** The rotation speed */
+#define ROTATION_SPEED_MS (1000/60)
 
 /* rotation value */
 static GLfloat angle = 0.0;
@@ -128,6 +130,8 @@ static void drawDude(dude_t *d) {
 
 static void display(void)
 {
+	unsigned int i;
+
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -139,28 +143,14 @@ static void display(void)
 
 	glScalef(0.25,0.25,0.25);
 
-	{
-		unsigned int i;
-		glTranslatef(-8*50, 0.0, 0.0); /* set reference point */
-		for(i=0;i<100;i++) {
-			glTranslatef(8, 0.0, 0.0); /* set reference point */
-			drawDude(dude);
-		}
+	/* Set reference point */
+	glTranslatef(-8*50, 0.0, 0.0);
+	for(i=0;i<100;i++) {
+		glTranslatef(8, 0.0, 0.0);
+		drawDude(dude);
 	}
-	glFlush();
 
-	{
-		unsigned long long ms;
-		static unsigned long long oldms = 0;
-		struct timeval t;
-		gettimeofday( &t, NULL );
-		ms = t.tv_sec * 1000 + (t.tv_usec / 1000);
-		if( oldms + 10 < ms )
-		{
-			angle += 1; /* update the angle of rotation */
-			oldms = ms;
-		}
-	}
+	glFlush();
 }
 
 static void make_frustrum( double fovy, double aspect_ratio, double front, double back )
@@ -183,13 +173,35 @@ static void reshape(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
+static void rotate()
+{
+	angle += 1.0;
+
+	/* If angle gets too large the float will not be able to represent
+	   the increments and the rotation will stop. */
+	if( angle > 360.0f ) {
+		angle = 0.0f;
+	}
+}
+
+#if USE_GTK == 0
+static void rotate_callback(int value)
+{
+	UNUSED( value );
+	rotate();
+	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
+}
+
+#endif
+
 #if USE_GTK == 1
-static gboolean rotate(gpointer user_data)
+static gboolean rotate_callback(gpointer user_data)
 {
 	GtkWidget *drawing_area = GTK_WIDGET(user_data);
 
-	/* Could tweak angle from here? */
 	/* g_print("rotate\n"); */
+	rotate();
+
 	gdk_window_invalidate_rect(drawing_area->window, &drawing_area->allocation, FALSE);
 	gdk_window_process_updates(drawing_area->window, FALSE);
 	return TRUE;
@@ -290,7 +302,7 @@ int main(int argc, char * argv[]) {
                          G_CALLBACK(expose), NULL);
 	gtk_widget_show_all(window);
 
-	g_timeout_add(1000/60, rotate, drawing_area);
+	g_timeout_add(ROTATION_SPEED_MS, rotate_callback, drawing_area);
 #else
 	glutInitWindowSize(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
 	glutInitWindowPosition(100, 100);
@@ -298,6 +310,7 @@ int main(int argc, char * argv[]) {
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutIdleFunc(display);
+	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
 #endif
 
 	glEnable(GL_DEPTH_TEST);
