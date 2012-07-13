@@ -39,7 +39,7 @@ typedef struct col_t {
 
 typedef struct pos_t {
 	GLfloat x, y, z;
-  col_t c;
+	col_t c;
 } pos_t;
 
 typedef struct item_t {
@@ -63,6 +63,9 @@ typedef struct model_t {
 
 	dude_t *test;
 	pos_t test_pos;
+
+	dude_t *doob;
+	pos_t doob_pos;
 } model_t;
 
 
@@ -95,6 +98,7 @@ static dude_t *createDude(const pos_t dude[], size_t size) {
 #include "data/b2.cotton"
 #include "data/gir.cotton"
 #include "data/test.cotton"
+#include "data/doob.cotton"
 
 static void destroyModel( model_t *m )
 {
@@ -103,6 +107,7 @@ static void destroyModel( model_t *m )
 		destroyDude(m->b2);
 		destroyDude(m->gir);
 		destroyDude(m->test);
+		destroyDude(m->doob);
 		free(m);
 	}
 }
@@ -123,8 +128,12 @@ static model_t *createModel(void) {
 		m->test = createDude(dude_test, sizeof(dude_test));
 		m->test_pos.x = 10.0f; m->test_pos.y = 0.0f; m->test_pos.z = 0.0f;
 
+		m->doob = createDude(dude_doob, sizeof(dude_doob));
+		m->doob_pos.x = 0.0f; m->doob_pos.y = 0.0f; m->doob_pos.z = 20.0f;
+
 		if((m->b == NULL) || (m->b2 == NULL) ||
-		   (m->gir == NULL) || (m->test == NULL)) {
+		   (m->gir == NULL) || (m->test == NULL) ||
+		   (m->doob == NULL)) {
 			destroyModel(m);
 			m = NULL;
 		}
@@ -205,6 +214,11 @@ static void drawModel(model_t *m)
 	glPushMatrix();
 	glTranslatef(m->test_pos.x, m->test_pos.y, m->test_pos.z);
 	drawDude(m->test);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(m->doob_pos.x, m->doob_pos.y, m->doob_pos.z);
+	drawDude(m->doob);
 	glPopMatrix();
 }
 
@@ -343,6 +357,10 @@ int main(int argc, char * argv[]) {
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
 #endif
 	model = createModel();
+	if(model == NULL) {
+		printf("Failed to create model :(\n");
+		exit(1);
+	}
 
 #if USE_GTK == 1
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
