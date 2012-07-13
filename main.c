@@ -4,13 +4,10 @@
 #include <string.h>
 #include <math.h>
 
-/* TODO: Our code shouldn't use the OpenGL Utility library as OpenGLES does not support it. */
 #if defined(__APPLE__) || defined(MACOSX)
 # include <OpenGL/gl.h>
-# include <OpenGL/glu.h>
 #else
 # include <GL/gl.h>
-# include <GL/glu.h>
 #endif
 
 #if USE_GTK == 1
