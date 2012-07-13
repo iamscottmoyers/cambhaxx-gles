@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 /* TODO: Our code shouldn't use the OpenGL Utility library as OpenGLES does not support it. */
 #if defined(__APPLE__) || defined(MACOSX)
@@ -20,6 +21,11 @@
 #endif
 
 #define UNUSED(_var) ((void)(_var))
+
+/** Default window width */
+#define DEFAULT_WIN_WIDTH (800)
+/** Default window height */
+#define DEFAULT_WIN_HEIGHT (600)
 
 /* rotation value */
 static GLfloat angle = 0.0;
@@ -43,44 +49,6 @@ typedef struct dude_t {
 } dude_t;
 
 static dude_t *createDude(void) {
-	/*
-	  z = 0.0
-	                 +----+
-	                 | 14 |
-	              +--+----+--+
-	              | 12  | 13 |
-	              +--+----+--+
-	                 | 11 |
-	       +----+----+----+----+----+
-	  +----| 6  | 5  | 10 | 19 | 21 |----+
-	  | 7  |----+----+----+----+----| 22 |
-	  +----+    | 4  | 9  | 18 |    +----+
-	            +----+----+----+
-	            | 3  | 8  | 17 |
-	            +----+----+----+
-	            | 2  |    | 16 |
-	            +----+    +----+
-	            | 1  |    | 15 |
-	            +----+    +----+
-
-	   z = 1.0
-	                 +----+
-	                 | 14 |
-	                 +----+
-
-
-
-
-
-
-
-
-
-	            +----+    +----+
-	            | 0  |    | 20 |
-	            +----+    +----+
-
-	 */
 	#include "data/gir.cotton"
 
 	dude_t *d = (dude_t *)calloc(1, sizeof(dude_t));
@@ -100,8 +68,11 @@ static dude_t *createDude(void) {
 
 static void destroyDude( dude_t *d )
 {
-	free( d->dude_item.blocks );
-	free( d );
+	if( d != NULL )
+	{
+		free( d->dude_item.blocks );
+		free( d );
+	}
 }
 
 static dude_t *dude;
@@ -121,16 +92,6 @@ static void drawCube(void)
 		P, M, P
 	};
 
-	/*
-	static GLfloat colors[] = {0.0f, 0.0f, 0.0f, 1.0f,
-	                           1.0f, 0.0f, 0.0f, 1.0f,
-	                           1.0f, 1.0f, 0.0f, 1.0f,
-	                           0.0f, 1.0f, 0.0f, 1.0f,
-	                           0.0f, 0.0f, 1.0f, 1.0f,
-	                           1.0f, 0.0f, 1.0f, 1.0f,
-	                           1.0f, 1.0f, 1.0f, 1.0f,
-	                           0.0f, 1.0f, 1.0f, 1.0f };*/
-
 	static GLubyte indices[] = {
 		0, 1, 2, 0, 2, 3, /* FRONT */
 		7, 6, 5, 7, 5, 4, /* BACK */
@@ -149,7 +110,7 @@ static void drawDude(dude_t *d) {
 
 	/* TODO:
 	   figure out a better way of doing this color setting.
-	   i think that using GLubyte rather than the GLfloat is fine for the colors?
+	   I think that using GLubyte rather than the GLfloat is fine for the colors?
 	*/
 	GLubyte colors[8*4];
 	for(i=0;i<d->dude_item.count;++i) {
@@ -165,13 +126,13 @@ static void drawDude(dude_t *d) {
 	}
 }
 
-static void display (void)
+static void display(void)
 {
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
+	glTranslatef( 0, 0, -5 );
 
-	gluLookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 	glRotatef(angle, 1.0, 0.0, 0.0);
 	glRotatef(angle, 0.0, 1.0, 0.0);
 	glRotatef(angle, 0.0, 0.0, 0.0);
@@ -202,16 +163,25 @@ static void display (void)
 	}
 }
 
-#if USE_GTK == 0
+static void make_frustrum( double fovy, double aspect_ratio, double front, double back )
+{
+	const double DEG2RAD = 3.14159265 / 180;
+	double tangent = tan(fovy/2 * DEG2RAD);
+	double height = front * tangent;
+	double width = height * aspect_ratio;
+	glFrustum( -width /* left */, width /* right */,
+	           -height /* bottom */, height /* top */,
+	           front /* near */, back /* far */ );
+}
+
 static void reshape(int w, int h)
 {
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
+	make_frustrum(60, w / (GLfloat)h, 1.0, 100.0);
 	glMatrixMode(GL_MODELVIEW);
 }
-#endif
 
 #if USE_GTK == 1
 static gboolean rotate(gpointer user_data)
@@ -268,16 +238,8 @@ static gboolean configure(GtkWidget *drawing_area, GdkEventConfigure *event,
 		exit(1);
 	}
 
-	glLoadIdentity();
-	glViewport(0, 0, drawing_area->allocation.width, drawing_area->allocation.height);
+	reshape( drawing_area->allocation.width, drawing_area->allocation.height );
 
-	/* I'm a little confused as gluPerspective does a glFrustrum based on a glOrtho
-	 * so I might be messing things up a bit here */
-	glOrtho(-10,10,-10,10,-20050,10000);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glMatrixMode(GL_PROJECTION);
-	glMatrixMode(GL_MODELVIEW);
 	gdk_gl_drawable_gl_end(gl_dbl);
 
 	return TRUE;
@@ -298,10 +260,9 @@ int main(int argc, char * argv[]) {
 #endif
 	dude = createDude();
 
-
 #if USE_GTK == 1
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size (GTK_WINDOW (window), 800, 600);
+	gtk_window_set_default_size (GTK_WINDOW (window), DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
 	drawing_area = gtk_drawing_area_new();
 	gtk_container_add( GTK_CONTAINER( window ), drawing_area );
 	g_signal_connect_swapped (window, "destroy",
@@ -322,18 +283,7 @@ int main(int argc, char * argv[]) {
 		printf("Couldn't get capabilities we needed :(\n");
 		exit(1);
 	}
-#else
-	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(100, 100);
-	glutCreateWindow("loads of rotating dudes");
-#endif
 
-	glEnable( GL_DEPTH_TEST );
-	glFrontFace(GL_CW);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-#if USE_GTK == 1
 	g_signal_connect(drawing_area, "configure-event",
                          G_CALLBACK(configure), NULL);
 	g_signal_connect(drawing_area, "expose-event",
@@ -341,12 +291,23 @@ int main(int argc, char * argv[]) {
 	gtk_widget_show_all(window);
 
 	g_timeout_add(1000/60, rotate, drawing_area);
-	gtk_main();
-
 #else
+	glutInitWindowSize(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
+	glutInitWindowPosition(100, 100);
+	glutCreateWindow("loads of rotating dudes");
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutIdleFunc(display);
+#endif
+
+	glEnable(GL_DEPTH_TEST);
+	glFrontFace(GL_CW);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+#if USE_GTK == 1
+	gtk_main();
+#else
 	glutMainLoop();
 #endif
 	glDisableClientState(GL_VERTEX_ARRAY);
