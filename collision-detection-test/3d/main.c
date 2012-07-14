@@ -165,57 +165,57 @@ static void drawCube(void)
 	const GLfloat vertices[] = {
 		/* Front */
 		M, M, P,
-		M, P, P,
+		P, M, P,
 		P, P, P,
 
 		M, M, P,
 		P, P, P,
-		P, M, P,
+		M, P, P,
 
 		/* Back */
 		P, M, M,
-		P, P, M,
+		M, M, M,
 		M, P, M,
 
 		P, M, M,
 		M, P, M,
-		M, M, M,
+		P, P, M,
 
 		/* Right */
+		P, M, P,
 		P, M, M,
 		P, P, M,
-		P, P, P,
 
-		P, M, M,
 		P, M, P,
+		P, P, M,
 		P, P, P,
 
 		/* Left */
+		M, M, M,
 		M, M, P,
 		M, P, P,
-		M, P, M,
 
-		M, M, P,
-		M, P, M,
 		M, M, M,
+		M, P, P,
+		M, P, M,
 
 		/* Top */
-		M, P, M,
 		M, P, P,
-		P, P, P,
-
-		M, P, M,
 		P, P, P,
 		P, P, M,
 
+		M, P, P,
+		P, P, M,
+		M, P, M,
+
 		/* Bottom */
+		P, M, P,
 		M, M, P,
 		M, M, M,
-		P, M, M,
 
-		M, M, P,
-		P, M, M,
-		P, M, P
+		P, M, P,
+		M, M, M,
+		P, M, M
 	};
 
 	const GLfloat normals[] = {
@@ -424,7 +424,7 @@ static void reshape(int w, int h)
 
 static void rotate()
 {
-	angle += 1.0;
+	angle += 0.5;
 
 	/* If angle gets too large the float will not be able to represent
 	   the increments and the rotation will stop. */
@@ -474,6 +474,7 @@ static void move_dude_callback(int value) {
     /* loop through model->* if not self check for collision */
     /* compare model->moving with model->fixed */
     {      
+      /* moving bounds, relative to object position */
       GLfloat m_x_min = model->moving_pos.x - (GLfloat)abs((int)model->moving->dude_item.bounds[0].min);
       GLfloat m_x_max = model->moving_pos.x + model->moving->dude_item.bounds[0].max;
 
@@ -483,11 +484,7 @@ static void move_dude_callback(int value) {
       GLfloat m_z_min = model->moving_pos.z - (GLfloat)abs((int)model->moving->dude_item.bounds[2].min);
       GLfloat m_z_max = model->moving_pos.z + model->moving->dude_item.bounds[2].max;
 
-      printf("moving:\t(%d, %d)\n\t(%d, %d)\n\t(%d, %d)\n",
-	     (int)m_x_min, (int)m_x_max,
-	     (int)m_y_min, (int)m_y_max,
-	     (int)m_z_min, (int)m_z_max);
-
+      /* fixed bounds, relative to object position */
       GLfloat f_x_min = model->fixed_pos.x - (GLfloat)abs((int)model->fixed->dude_item.bounds[0].min);
       GLfloat f_x_max = model->fixed_pos.x + model->fixed->dude_item.bounds[0].max;
 
@@ -501,6 +498,10 @@ static void move_dude_callback(int value) {
 	     (int)f_x_min, (int)f_x_max,
 	     (int)f_y_min, (int)f_y_max,
 	     (int)f_z_min, (int)f_z_max);
+      printf("moving:\t(%d, %d)\n\t(%d, %d)\n\t(%d, %d)\n",
+	     (int)m_x_min, (int)m_x_max,
+	     (int)m_y_min, (int)m_y_max,
+	     (int)m_z_min, (int)m_z_max);
 
       if(((m_x_max > f_x_min) && (m_x_min < f_x_max)) /* x */
 	 &&
@@ -515,6 +516,7 @@ static void move_dude_callback(int value) {
 	 */
       }
     }
+    glutPostRedisplay();
     glutTimerFunc(1000/2, move_dude_callback, 0);
   }
 }
@@ -658,7 +660,6 @@ int main(int argc, char * argv[])
 	glutCreateWindow("Simple 3D Collision Detection");
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
-	glutIdleFunc(display);
 	/* turned rotation off */
 	/*glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );*/
 	/* move m->moving */
@@ -667,7 +668,9 @@ int main(int argc, char * argv[])
 #endif
 
 	glEnable(GL_DEPTH_TEST);
-	glFrontFace(GL_CW);
+	glFrontFace(GL_CCW);
+	glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
