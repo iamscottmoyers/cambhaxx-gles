@@ -14,7 +14,11 @@
 # include <gtk/gtk.h>
 # include <gtk/gtkgl.h>
 #else
-# include <GLUT/glut.h>
+# if defined(__APPLE__) || defined(MACOSX)
+#  include <GLUT/glut.h>
+# else
+#  include <GL/glut.h>
+# endif
 #endif
 
 /** Removes unused variable warnings. */
@@ -416,5 +420,6 @@ int main(int argc, char * argv[]) {
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 	destroyModel(model);
+
 	return 0;
 }
