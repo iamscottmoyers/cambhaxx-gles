@@ -380,6 +380,7 @@ static void rotate_callback(int value)
 {
 	UNUSED( value );
 	rotate();
+	glutPostRedisplay();
 	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
 }
 
@@ -522,7 +523,6 @@ int main(int argc, char * argv[])
 	glutCreateWindow("loads of rotating dudes");
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
-	glutIdleFunc(display);
 	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
 #endif
 
