@@ -157,57 +157,57 @@ static void drawCube(void)
 	const GLfloat vertices[] = {
 		/* Front */
 		M, M, P,
-		M, P, P,
+		P, M, P,
 		P, P, P,
 
 		M, M, P,
 		P, P, P,
-		P, M, P,
+		M, P, P,
 
 		/* Back */
 		P, M, M,
-		P, P, M,
+		M, M, M,
 		M, P, M,
 
 		P, M, M,
 		M, P, M,
-		M, M, M,
+		P, P, M,
 
 		/* Right */
+		P, M, P,
 		P, M, M,
 		P, P, M,
-		P, P, P,
 
-		P, M, M,
 		P, M, P,
+		P, P, M,
 		P, P, P,
 
 		/* Left */
+		M, M, M,
 		M, M, P,
 		M, P, P,
-		M, P, M,
 
-		M, M, P,
-		M, P, M,
 		M, M, M,
+		M, P, P,
+		M, P, M,
 
 		/* Top */
-		M, P, M,
 		M, P, P,
-		P, P, P,
-
-		M, P, M,
 		P, P, P,
 		P, P, M,
 
+		M, P, P,
+		P, P, M,
+		M, P, M,
+
 		/* Bottom */
+		P, M, P,
 		M, M, P,
 		M, M, M,
-		P, M, M,
 
-		M, M, P,
-		P, M, M,
-		P, M, P
+		P, M, P,
+		M, M, M,
+		P, M, M
 	};
 
 	const GLfloat normals[] = {
@@ -366,7 +366,7 @@ static void reshape(int w, int h)
 
 static void rotate()
 {
-	angle += 1.0;
+	angle += 0.5;
 
 	/* If angle gets too large the float will not be able to represent
 	   the increments and the rotation will stop. */
@@ -527,7 +527,10 @@ int main(int argc, char * argv[])
 #endif
 
 	glEnable(GL_DEPTH_TEST);
-	glFrontFace(GL_CW);
+	glFrontFace(GL_CCW);
+	glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
+
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
