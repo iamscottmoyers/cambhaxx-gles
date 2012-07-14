@@ -8,14 +8,14 @@ use Data::Dumper;
 # colors as defined on web page
 my @colors = (0xDF1F1F, 0xDFAF1F, 0x80DF1F, 0x1FDF50, 0x1FDFDF, 0x1F4FDF, 0x7F1FDF, 0xDF1FAF, 0xEFEFEF, 0x303030);
 
-if(@ARGV != 2) {
+if(@ARGV < 2) {
     &usage();
     exit(-1);
 }
 
 # check arguments
 if($ARGV[0] eq 'decode') {
-    &decode($ARGV[1]);
+    &decode($ARGV[1], $ARGV[2]);
 }
 elsif($ARGV[0] eq 'encode') {
     if(-e $ARGV[1]) {
@@ -39,10 +39,11 @@ exit(0);
 # similar to buildFromHash() function
 sub decode {
     my $str = shift(@_);
+    my $arrayName = shift(@_);
 
     print '/* ' . $str . ' */' . "\n";
     # print structure container
-    print 'const pos_t b[] = {' . "\n";
+    print 'const pos_t ' . (($arrayName) ? $arrayName : 'vox') . '[] = {' . "\n";
 
     my @data = strToArray($str);
     my $i = 0;
@@ -120,7 +121,7 @@ sub encode {
 # print usage details
 sub usage {
     print 'Usage: ' . "\n";
-    print 'perl ' . $0 . ' [encode|decode] [inputFile|string]' . "\n";
+    print 'perl ' . $0 . ' [encode|decode] [inputFile|string arrayName]' . "\n";
     print '- encode takes c struct file and outputs string to stdout' ."\n";
     print '- decode takes string and outputs c struct to stdout' . "\n";
 }
