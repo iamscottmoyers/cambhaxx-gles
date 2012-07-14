@@ -152,26 +152,130 @@ static model_t *model;
 
 static void drawCube(void)
 {
-	GLfloat vertices[24] = {
-		M, M, M,
-		M, P, M,
-		P, P, M,
-		P, M, M,
+	/* 3 vertices for every triangle in a cube. We need this amount as each vertex
+	   needs a unique normal associated with it for lighting to work correctly. */
+	const GLfloat vertices[] = {
+		/* Front */
 		M, M, P,
 		M, P, P,
 		P, P, P,
+
+		M, M, P,
+		P, P, P,
+		P, M, P,
+
+		/* Back */
+		P, M, M,
+		P, P, M,
+		M, P, M,
+
+		P, M, M,
+		M, P, M,
+		M, M, M,
+
+		/* Right */
+		P, M, M,
+		P, P, M,
+		P, P, P,
+
+		P, M, M,
+		P, M, P,
+		P, P, P,
+
+		/* Left */
+		M, M, P,
+		M, P, P,
+		M, P, M,
+
+		M, M, P,
+		M, P, M,
+		M, M, M,
+
+		/* Top */
+		M, P, M,
+		M, P, P,
+		P, P, P,
+
+		M, P, M,
+		P, P, P,
+		P, P, M,
+
+		/* Bottom */
+		M, M, P,
+		M, M, M,
+		P, M, M,
+
+		M, M, P,
+		P, M, M,
 		P, M, P
 	};
 
-	static GLubyte indices[] = {
-		0, 1, 2, 0, 2, 3, /* FRONT */
-		7, 6, 5, 7, 5, 4, /* BACK */
-		3, 2, 6, 3, 6, 7, /* RIGHT */
-		4, 5, 1, 4, 1, 0, /* LEFT */
-		1, 5, 6, 1, 6, 2, /* TOP */
-		4, 0, 3, 4, 3, 7  /* BOTTOM */
+	const GLfloat normals[] = {
+		/* Front - All normals facing forwards */
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+
+		/* Back - All normals facing backwards */
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, -1.0f,
+
+		/* Right - All normals facing right */
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+
+		/* Left - All normals facing left */
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+		-1.0f, 0.0f, 0.0f,
+
+		/* Top - All normals facing up */
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+
+		/* Bottom - All normals facing down */
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 0.0f
 	};
 
+	const GLubyte indices[] = {
+		0, 1, 2, 3, 4, 5,       /* FRONT */
+		6, 7, 8, 9, 10, 11,     /* BACK */
+		12, 13, 14, 15, 16, 17, /* RIGHT */
+		18, 19, 20, 21, 22, 23, /* LEFT */
+		24, 25, 26, 27, 28, 29, /* TOP */
+		30, 31, 32, 33, 34, 35  /* BOTTOM */
+	};
+
+	glNormalPointer(GL_FLOAT, 0, normals);
 	glVertexPointer(3, GL_FLOAT, 0, vertices);
 	glDrawElements(GL_TRIANGLES, NELEMS(indices), GL_UNSIGNED_BYTE, indices);
 }
@@ -184,15 +288,15 @@ static void drawDude(dude_t *d)
 	   figure out a better way of doing this color setting.
 	   I think that using GLubyte rather than the GLfloat is fine for the colors?
 	*/
-	GLubyte colors[8*4];
+	GLubyte colors[6*6*4];
 	for(i=0;i<d->dude_item.count;++i) {
-		for(j=0;j<8;j++) {
+		for(j=0;j<6*6;j++) {
 			memcpy(colors+(j * 4), &(d->dude_item.blocks[i].c), 4);
 		}
 
 		glPushMatrix();
 		glTranslatef(d->dude_item.blocks[i].x, d->dude_item.blocks[i].y, d->dude_item.blocks[i].z);
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0 , colors);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
 		drawCube();
 		glPopMatrix();
 	}
@@ -231,13 +335,10 @@ static void display(void)
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
-	glTranslatef( 0, 0, -5 );
-
-	glRotatef(angle, 1.0, 0.0, 0.0);
+	glTranslatef( 0, -2, -7 );
 	glRotatef(angle, 0.0, 1.0, 0.0);
-	glRotatef(angle, 0.0, 0.0, 0.0);
-
 	glScalef(0.25,0.25,0.25);
+	glTranslatef( 0, 0, -10 );
 
 	drawModel(model);
 	glFlush();
@@ -348,7 +449,25 @@ static gboolean configure(GtkWidget *drawing_area, GdkEventConfigure *event,
 }
 #endif
 
-int main(int argc, char * argv[]) {
+static void light_0_enable(void)
+{
+	const GLfloat ambient[] = {0.6, 0.6, 0.6, 1.0};
+	const GLfloat diffuse[] = {0.2, 0.2, 0.2, 1.0};
+	const GLfloat specular[] = {0.0, 0.0, 0.0, 1.0};
+	const GLfloat position[] = {0.0, 10.0, 10.0, 0.0};
+	const GLfloat direction[] = {0.0, -1.0, -1.0};
+
+	glEnable(GL_LIGHT0);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+	glLightfv(GL_LIGHT0, GL_POSITION, position);
+	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, direction);
+	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 45.0);
+}
+
+int main(int argc, char * argv[])
+{
 #if USE_GTK == 1
 	GtkWidget *window;
 	GtkWidget *drawing_area;
@@ -411,14 +530,22 @@ int main(int argc, char * argv[]) {
 	glFrontFace(GL_CW);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_COLOR_MATERIAL);
+	glShadeModel(GL_SMOOTH);
+
+	light_0_enable();
 
 #if USE_GTK == 1
 	gtk_main();
 #else
 	glutMainLoop();
 #endif
-	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 	destroyModel(model);
 
 	return 0;
