@@ -1,0 +1,11 @@
+setup a simple 3d collision test
+- single view window (no rotation)
+- generate 2 objects (1 fix, 1 moving 1 "block" each timestep)
+- check collision
+- printout details
+- test all three dimensions
+
+-- create and view bounding box around objects (need to figure how to draw wireframes in GLES)
+-- initally stop on bounding box collision
+-- on bounding box collision perform more finegrained checks
+
