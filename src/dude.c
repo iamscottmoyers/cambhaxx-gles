@@ -326,7 +326,7 @@ static void display(void)
 	glFlush();
 }
 
-static void make_frustrum( double fovy, double aspect_ratio, double front, double back )
+static void make_frustum( double fovy, double aspect_ratio, double front, double back )
 {
 	const double DEG2RAD = 3.14159265 / 180;
 	double tangent = tan(fovy/2 * DEG2RAD);
@@ -342,7 +342,7 @@ static void reshape(int w, int h)
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	make_frustrum(60, w / (GLfloat)h, 1.0, 100.0);
+	make_frustum(60, w / (GLfloat)h, 1.0, 100.0);
 	glMatrixMode(GL_MODELVIEW);
 }
 
