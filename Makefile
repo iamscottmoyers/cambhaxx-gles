@@ -1,7 +1,16 @@
+# Standard Makefile
 CXX := gcc
 WARNINGFLAGS := -Wall -Wextra
 CXXFLAGS := $(WARNINGFLAGS) -g --pedantic
+# Executable name
+EXEC = theDude
 
+# Directories
+OBJDIR = obj
+SRCDIR = src
+INCLUDEDIR := include
+
+# OpenGL?
 UNAME = $(shell uname)
 ifeq ($(UNAME), Darwin)
 OPENGL_FLAGS = -framework OpenGL -framework GLUT
@@ -16,20 +25,24 @@ OPENGL_FLAGS = $(shell pkg-config --libs gtk+-2.0 gtkglext-1.0 gtkglext-x11-1.0)
 CXXFLAGS += $(shell pkg-config --cflags gtk+-2.0 gtkglext-1.0 gtkglext-x11-1.0)
 endif
 
-# This might be better as a seperate rule if we want more stuff?
-ifdef DEBUG
-COMPILE_FLAGS += -DDEBUG
-endif
-
-
+# Libraries
 LIBS := -lm $(OPENGL_FLAGS)
 
-dude : main.o
-	$(CXX) $(CXXFLAGS) $(LIBS) $^ -o $@
+# Files and folders
+SRCS    = $(shell find $(SRCDIR) -name '*.c')
+SRCDIRS = $(shell find . -name '*.c' | dirname {} | sort | uniq | sed 's/\/$(SRCDIR)//g' )
+OBJS    = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SRCS))
 
-%.o : %.c
-	$(CXX) $(COMPILE_FLAGS) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+# Targets
+$(EXEC): build-obj-store $(OBJS)
+	$(CXX) $(OBJS) $(LIBS) -o $@
 
-clean :
-	rm -f *.o *~
-	rm -f dude
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CXX) $(OPTS) $(CXXFLAGS) $(OPENGL_FLAGS) $(COMPILE_FLAGS) -I$(INCLUDEDIR) -c $< -o $@
+	
+clean:
+	rm -rf $(EXEC) $(OBJDIR)
+	
+build-obj-store:
+	-mkdir -p $(OBJDIR)
+

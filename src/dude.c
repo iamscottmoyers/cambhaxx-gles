@@ -10,10 +10,7 @@
 # include <GL/gl.h>
 #endif
 
-#if USE_GTK == 1
-# include <gtk/gtk.h>
-# include <gtk/gtkgl.h>
-#else
+#if !defined(USE_GTK)
 # if defined(__APPLE__) || defined(MACOSX)
 #  include <GLUT/glut.h>
 # else
@@ -386,70 +383,6 @@ static void rotate_callback(int value)
 
 #endif
 
-#if USE_GTK == 1
-static gboolean rotate_callback(gpointer user_data)
-{
-	GtkWidget *drawing_area = GTK_WIDGET(user_data);
-
-	/* g_print("rotate\n"); */
-	rotate();
-
-	gdk_window_invalidate_rect(drawing_area->window, &drawing_area->allocation, FALSE);
-	gdk_window_process_updates(drawing_area->window, FALSE);
-	return TRUE;
-}
-
-static gboolean expose(GtkWidget *drawing_area, GdkEventExpose *event, gpointer user_data)
-{
-	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
-	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
-
-	UNUSED( event );
-	UNUSED( user_data );
-
-	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
-		printf("Can't start drawable :(\n");
-		exit(1);
-	}
-
-	/* Do drawing stuff */
-	/* g_print("expose\n"); */
-	display();
-
-	/* Finish up */
-	if (gdk_gl_drawable_is_double_buffered(gl_dbl))
-		gdk_gl_drawable_swap_buffers(gl_dbl);
-	else
-		glFlush();
-
-	gdk_gl_drawable_gl_end(gl_dbl);
-
-	return TRUE;
-}
-
-/* This is the gtk way of the window changing size */
-static gboolean configure(GtkWidget *drawing_area, GdkEventConfigure *event,
-                          gpointer user_data)
-{
-	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
-	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
-
-	UNUSED( event );
-	UNUSED( user_data );
-
-	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
-		printf("Can't start drawable :(\n");
-		exit(1);
-	}
-
-	reshape( drawing_area->allocation.width, drawing_area->allocation.height );
-
-	gdk_gl_drawable_gl_end(gl_dbl);
-
-	return TRUE;
-}
-#endif
-
 static void light_0_enable(void)
 {
 	const GLfloat ambient[] = {0.6, 0.6, 0.6, 1.0};
@@ -470,12 +403,7 @@ static void light_0_enable(void)
 int main(int argc, char * argv[])
 {
 #if USE_GTK == 1
-	GtkWidget *window;
-	GtkWidget *drawing_area;
-	GdkGLConfig *gl_config;
-
-	gtk_init(&argc, &argv);
-	gtk_gl_init(&argc, &argv);
+	window_system_initialise(argc, &argv);
 #else
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
@@ -487,36 +415,11 @@ int main(int argc, char * argv[])
 	}
 
 #if USE_GTK == 1
-	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size (GTK_WINDOW (window), DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
-	drawing_area = gtk_drawing_area_new();
-	gtk_container_add( GTK_CONTAINER( window ), drawing_area );
-	g_signal_connect_swapped (window, "destroy",
-	                          G_CALLBACK (gtk_main_quit), NULL);
-	gtk_widget_set_events(drawing_area, GDK_EXPOSURE_MASK);
 
-	gl_config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB |
-					      GDK_GL_MODE_DEPTH |
-					      GDK_GL_MODE_DOUBLE);
+        window_system_set_redraw_callback(display);
+        window_system_set_resize_callback(reshape);
+        window_system_set_rotate_callback(ROTATION_SPEED_MS, rotate);
 
-	if (!gl_config) {
-		printf("Messed up the config :(\n");
-		exit(1);
-	}
-
-	if (!gtk_widget_set_gl_capability(drawing_area, gl_config, NULL, TRUE,
-                                          GDK_GL_RGBA_TYPE)) {
-		printf("Couldn't get capabilities we needed :(\n");
-		exit(1);
-	}
-
-	g_signal_connect(drawing_area, "configure-event",
-                         G_CALLBACK(configure), NULL);
-	g_signal_connect(drawing_area, "expose-event",
-                         G_CALLBACK(expose), NULL);
-	gtk_widget_show_all(window);
-
-	g_timeout_add(ROTATION_SPEED_MS, rotate_callback, drawing_area);
 #else
 	glutInitWindowSize(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
 	glutInitWindowPosition(100, 100);
@@ -542,7 +445,7 @@ int main(int argc, char * argv[])
 	light_0_enable();
 
 #if USE_GTK == 1
-	gtk_main();
+	window_system_start_main_loop();
 #else
 	glutMainLoop();
 #endif
