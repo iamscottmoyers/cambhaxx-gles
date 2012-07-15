@@ -2,3 +2,4 @@
 *.o
 dude
 .DS_Store
+*.dSYM
