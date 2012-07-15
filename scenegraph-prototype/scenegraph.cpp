@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cstring>
+#include <cassert>
+#include <set>
 
 #include "scenegraph.h"
 
@@ -49,11 +51,13 @@ SceneGraphNode::~SceneGraphNode(void)
 
 void SceneGraphNode::retain(void)
 {
+	assert(m_refcount > 0 && "Refcount is not greater than 0. Perhaps the object has been deleted?");
 	++m_refcount;
 }
 
 void SceneGraphNode::release(void)
 {
+	assert(m_refcount > 0 && "Refcount is not greater than 0. Perhaps the object has been deleted?");
 	--m_refcount;
 	if(m_refcount <= 0) {
 		/* Commit suicide. Don't use any members after this call. */
@@ -61,10 +65,51 @@ void SceneGraphNode::release(void)
 	}
 }
 
+static bool racyclic(SceneGraphNode *node, std::set<SceneGraphNode *> &visiting, std::set<SceneGraphNode *> &finished)
+{
+	// Insert this node into the visiting set
+	visiting.insert(node);
+
+	// Visit each child node
+	for(SceneGraphNode::iterator i = node->begin(); i != node->end(); ++i) {
+		SceneGraphNode *child = *i;
+
+		// If the child is already finished we can ignore it as we know it has no cycles
+		if(finished.find(child) == finished.end()) {
+
+			// If the child is in the visiting set we have found a cycle
+			if(visiting.find(child) != visiting.end()) {
+				return false;
+			}
+
+			// If any of this nodes children are cyclic return false
+			if(!racyclic(child, visiting, finished)) {
+				return false;
+			}
+		}
+	}
+
+	// Remove from the visiting set and plase in the finished set
+	visiting.erase(node);
+	finished.insert(node);
+
+	// This node is not part of a cycle
+	return true;
+}
+
+static bool acyclic(SceneGraphNode *node)
+{
+	std::set<SceneGraphNode *> visiting;
+	std::set<SceneGraphNode *> finished;
+
+	return racyclic(node, visiting, finished);
+}
+
 void SceneGraphNode::addChild(SceneGraphNode *child)
 {
 	child->retain();
 	m_children.push_back(child);
+	assert(acyclic(child) && "addChild() created a cycle in the scene graph.");
 }
 
 void SceneGraphNode::removeChild(SceneGraphNode *child)
@@ -223,5 +268,6 @@ int main(int argc, char *argv[])
 	graph->outputDot();
 
 	delete graph;
+
 	return 0;
 }
