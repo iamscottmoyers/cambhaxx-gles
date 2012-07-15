@@ -178,8 +178,14 @@ void SceneGraphVoxelObject::draw(void)
 }
 
 // ----------- SCENE GRAPH ROTATE -------------
-SceneGraphRotate::SceneGraphRotate(void) : SceneGraphNode(SCENE_GRAPH_ROTATE)
+SceneGraphRotate::SceneGraphRotate(unsigned int const rotation[]) : SceneGraphNode(SCENE_GRAPH_ROTATE)
 {
+	memcpy(m_rotation, rotation, sizeof(m_rotation));
+}
+
+void SceneGraphRotate::update(unsigned int const rotation[])
+{
+	memcpy(m_rotation, rotation, sizeof(m_rotation));
 }
 
 void SceneGraphRotate::draw(void)
@@ -194,8 +200,14 @@ void SceneGraphRotate::draw(void)
 }
 
 // ----------- SCENE GRAPH TRANSLATE -------------
-SceneGraphTranslate::SceneGraphTranslate(void) : SceneGraphNode(SCENE_GRAPH_TRANSLATE)
+SceneGraphTranslate::SceneGraphTranslate(unsigned int const translation[]) : SceneGraphNode(SCENE_GRAPH_TRANSLATE)
 {
+	memcpy(m_translation, translation, sizeof(m_translation));
+}
+
+void SceneGraphTranslate::update(unsigned int const translation[])
+{
+	memcpy(m_translation, translation, sizeof(m_translation));
 }
 
 void SceneGraphTranslate::draw(void)
@@ -223,6 +235,7 @@ void SceneGraphRoot::draw(void)
 	}
 }
 
+// ----------- MAIN -------------
 int main(int argc, char *argv[])
 {
 	SceneGraph *graph;
@@ -234,13 +247,15 @@ int main(int argc, char *argv[])
 	SceneGraphVoxelObject *object2;
 
 	const struct vox_t test[2] = {
-		{{1, 2, 3}, {4, 5, 6, 7}},
-		{{8, 9, 10}, {11, 12, 13, 14}}
+		{{1, 2, 3, 4}, {5, 6, 7}},
+		{{8, 9, 10, 11}, {12, 13, 14}}
 	};
+	const unsigned int r[3] = {1, 2, 3};
+	const unsigned int t[3] = {4, 5, 6};
 
 	graph = new SceneGraph();
-	rotate = new SceneGraphRotate();
-	translate = new SceneGraphTranslate();
+	rotate = new SceneGraphRotate(r);
+	translate = new SceneGraphTranslate(t);
 	object0 = new SceneGraphVoxelObject(test, 2);
 	object1 = new SceneGraphVoxelObject(test, 2);
 	object2 = new SceneGraphVoxelObject(test, 2);
@@ -249,9 +264,6 @@ int main(int argc, char *argv[])
 	root->addChild(rotate);
 	rotate->addChild(translate);
 
-	// TODO: Make nodes reference counted so objects can be reused as children.
-	// The scenegraph should be a DAG not a tree.
-	// If we have lots of duplicated objects with different translations this may save us a lot of memory.
 	rotate->addChild(object0);
 	rotate->addChild(object2);
 	rotate->release();
