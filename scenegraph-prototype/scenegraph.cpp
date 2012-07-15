@@ -37,17 +37,33 @@ SceneGraphNode::iterator SceneGraphNode::end(void)
 SceneGraphNode::SceneGraphNode(SceneGraphNodeType type)
 {
 	m_type = type;
+	m_refcount = 1;
 }
 
 SceneGraphNode::~SceneGraphNode(void)
 {
 	for(iterator i = begin(); i != end(); ++i ) {
-		delete *i;
+		(*i)->release();
+	}
+}
+
+void SceneGraphNode::retain(void)
+{
+	++m_refcount;
+}
+
+void SceneGraphNode::release(void)
+{
+	--m_refcount;
+	if(m_refcount <= 0) {
+		/* Commit suicide. Don't use any members after this call. */
+		delete this;
 	}
 }
 
 void SceneGraphNode::addChild(SceneGraphNode *child)
 {
+	child->retain();
 	m_children.push_back(child);
 }
 
@@ -58,6 +74,7 @@ void SceneGraphNode::removeChild(SceneGraphNode *child)
 	// this if we tend to have access to the iterator for the child we're removing
 	// before calling this function.
 	m_children.remove(child);
+	child->release();
 }
 
 SceneGraphNodeType SceneGraphNode::getType(void)
@@ -102,7 +119,7 @@ SceneGraphVoxelObject::~SceneGraphVoxelObject(void)
 	delete[] m_voxels;
 
 	for(iterator i = begin(); i != end(); ++i ) {
-		delete *i;
+		(*i)->release();
 	}
 }
 
@@ -161,7 +178,7 @@ void SceneGraphRoot::draw(void)
 	}
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	SceneGraph *graph;
 	SceneGraphNode *root;
@@ -171,7 +188,7 @@ int main()
 	SceneGraphVoxelObject *object1;
 	SceneGraphVoxelObject *object2;
 
-	struct vox_t test[2] = {
+	const struct vox_t test[2] = {
 		{{1, 2, 3}, {4, 5, 6, 7}},
 		{{8, 9, 10}, {11, 12, 13, 14}}
 	};
@@ -191,11 +208,20 @@ int main()
 	// The scenegraph should be a DAG not a tree.
 	// If we have lots of duplicated objects with different translations this may save us a lot of memory.
 	rotate->addChild(object0);
+	rotate->addChild(object2);
+	rotate->release();
+
 	translate->addChild(object1);
 	translate->addChild(object2);
+	translate->release();
+
+	object0->release();
+	object1->release();
+	object2->release();
 
 	graph->draw();
 	graph->outputDot();
 
 	delete graph;
+	return 0;
 }

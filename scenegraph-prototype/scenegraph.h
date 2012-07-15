@@ -11,6 +11,7 @@ class SceneGraphNode {
 private:
 	SceneGraphNodeType m_type;
 	std::list<SceneGraphNode *> m_children;
+	int m_refcount;
 public:
 	// Iterator for traversing the child list
 	typedef std::list<SceneGraphNode *>::iterator iterator;
@@ -19,6 +20,8 @@ public:
 
 	SceneGraphNode(SceneGraphNodeType type);
 	virtual ~SceneGraphNode(void);
+	void retain(void);
+	void release(void);
 
 	SceneGraphNodeType getType(void);
 	void addChild(SceneGraphNode *child);
