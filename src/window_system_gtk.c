@@ -1,7 +1,15 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
 #include <gtk/gtkgl.h>
+
+#if defined(__APPLE__) || defined(MACOSX)
+# include <OpenGL/gl.h>
+#else
+# include <GL/gl.h>
+#endif
+
 #include "window_system.h"
+#include "utils.h"
 
 static GtkWidget *drawing_area;
 static GtkWidget *window;
@@ -11,7 +19,7 @@ int window_system_initialise(int argc, char ***argv)
 {
 	gtk_init(&argc, argv);
 	gtk_gl_init(&argc, argv);
-	
+
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_default_size(GTK_WINDOW (window), DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
 	drawing_area = gtk_drawing_area_new();
@@ -34,7 +42,7 @@ int window_system_initialise(int argc, char ***argv)
 		printf("Couldn't get capabilities we needed :(\n");
 		exit(1);
 	}
-	
+
         return 0;
 }
 
@@ -52,11 +60,14 @@ int window_system_start_main_loop()
 }
 
 static void (*redraw_func)(void);
-static gboolean redraw(GtkWidget *drawing_area, GdkEventExpose *event, 
+static gboolean redraw(GtkWidget *drawing_area, GdkEventExpose *event,
                        gpointer user_data)
 {
 	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
 	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
+
+	UNUSED(event);
+	UNUSED(user_data);
 
 	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
 		printf("Can't start drawable :(\n");
@@ -64,7 +75,7 @@ static gboolean redraw(GtkWidget *drawing_area, GdkEventExpose *event,
 	}
 
 	/* Do drawing stuff */
-	
+
 	if (redraw_func)
 	        redraw_func();
 
@@ -95,6 +106,9 @@ static gboolean resize(GtkWidget *drawing_area, GdkEventConfigure *event,
 {
 	GdkGLContext *gl_ctx = gtk_widget_get_gl_context(drawing_area);
 	GdkGLDrawable *gl_dbl = gtk_widget_get_gl_drawable(drawing_area);
+
+	UNUSED(event);
+	UNUSED(user_data);
 
 	if (!gdk_gl_drawable_gl_begin(gl_dbl, gl_ctx)) {
 		printf("Can't start drawable :(\n");
@@ -138,5 +152,3 @@ int window_system_set_rotate_callback(int rotation_speed, void (*rotation_callba
         gtk_widget_show_all(window);
         return 0;
 }
-
-

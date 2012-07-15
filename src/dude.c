@@ -10,24 +10,9 @@
 # include <GL/gl.h>
 #endif
 
-#if !defined(USE_GTK)
-# if defined(__APPLE__) || defined(MACOSX)
-#  include <GLUT/glut.h>
-# else
-#  include <GL/glut.h>
-# endif
-#endif
+#include "utils.h"
+#include "window_system.h"
 
-/** Removes unused variable warnings. */
-#define UNUSED(_var) ((void)(_var))
-
-/** Returns the number of elements in an array. */
-#define NELEMS(_arr) (sizeof((_arr))/sizeof((_arr)[0]))
-
-/** Default window width */
-#define DEFAULT_WIN_WIDTH (800)
-/** Default window height */
-#define DEFAULT_WIN_HEIGHT (600)
 /** The rotation speed */
 #define ROTATION_SPEED_MS (1000/60)
 
@@ -35,7 +20,7 @@
 static GLfloat angle = 0.0;
 
 typedef struct col_t {
-  GLubyte red, green, blue, alpha;
+	GLubyte red, green, blue, alpha;
 } col_t;
 
 typedef struct pos_t {
@@ -372,17 +357,6 @@ static void rotate()
 	}
 }
 
-#if USE_GTK == 0
-static void rotate_callback(int value)
-{
-	UNUSED( value );
-	rotate();
-	glutPostRedisplay();
-	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
-}
-
-#endif
-
 static void light_0_enable(void)
 {
 	const GLfloat ambient[] = {0.6, 0.6, 0.6, 1.0};
@@ -402,32 +376,17 @@ static void light_0_enable(void)
 
 int main(int argc, char * argv[])
 {
-#if USE_GTK == 1
 	window_system_initialise(argc, &argv);
-#else
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
-#endif
+
 	model = createModel();
 	if(model == NULL) {
 		printf("Failed to create model :(\n");
 		exit(1);
 	}
 
-#if USE_GTK == 1
-
         window_system_set_redraw_callback(display);
         window_system_set_resize_callback(reshape);
         window_system_set_rotate_callback(ROTATION_SPEED_MS, rotate);
-
-#else
-	glutInitWindowSize(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
-	glutInitWindowPosition(100, 100);
-	glutCreateWindow("loads of rotating dudes");
-	glutDisplayFunc(display);
-	glutReshapeFunc(reshape);
-	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
-#endif
 
 	glEnable(GL_DEPTH_TEST);
 	glFrontFace(GL_CCW);
@@ -444,11 +403,8 @@ int main(int argc, char * argv[])
 
 	light_0_enable();
 
-#if USE_GTK == 1
 	window_system_start_main_loop();
-#else
-	glutMainLoop();
-#endif
+
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);

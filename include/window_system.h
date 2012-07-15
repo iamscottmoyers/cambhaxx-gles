@@ -41,4 +41,3 @@ int window_system_set_resize_callback(void (*resize_callback)(int,int));
 int window_system_set_rotate_callback(int rotation_speed, void (*rotation_callback)(void));
 
 #endif
-
