@@ -93,6 +93,7 @@ SceneGraphVoxelObject::SceneGraphVoxelObject(struct vox_t const *voxels, unsigne
   : SceneGraphNode(SCENE_GRAPH_VOXEL_OBJECT)
 {
 	m_voxels = new struct vox_t[num_voxels];
+	memcpy(m_voxels, voxels, sizeof(struct vox_t) * num_voxels);
 }
 
 SceneGraphVoxelObject::~SceneGraphVoxelObject(void)
