@@ -7,7 +7,7 @@ UNAME = $(shell uname)
 ifeq ($(UNAME), Darwin)
 OPENGL_FLAGS = -framework OpenGL -framework GLUT
 else
-OPENGL_FLAGS = -lGL -lGLU -lglut
+OPENGL_FLAGS = -lGL -lglut
 endif
 
 # Use as: make USE_GTK=1
@@ -26,7 +26,7 @@ endif
 LIBS := -lm $(OPENGL_FLAGS)
 
 colin : main.o
-	$(CXX) $(CXXFLAGS) $(LIBS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
 
 %.o : %.c
 	$(CXX) $(COMPILE_FLAGS) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
