@@ -12,7 +12,7 @@
 int window_system_initialise(int argc, char ***argv)
 {
 	glutInit(&argc, *argv);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT);
 	glutInitWindowPosition(100, 100);
 	glutCreateWindow("loads of rotating dudes");
@@ -31,10 +31,17 @@ int window_system_start_main_loop()
         return 0;
 }
 
-/* Takes a function to call, hooks it up and that's called */
-int window_system_set_redraw_callback(void (*redraw_callback)(void))
+static void (*display)(void);
+static void glut_redraw_callback(void)
 {
-	glutDisplayFunc(redraw_callback);
+	display();
+	glutSwapBuffers();
+}
+
+int window_system_set_redraw_callback(void (*redraw_callback)(void))
+{	
+	display = redraw_callback;
+	glutDisplayFunc(glut_redraw_callback);
         return 0;
 }
 
@@ -48,11 +55,7 @@ static void (*rotate)(void);
 static void glut_rotation_callback(int value)
 {
 	UNUSED( value );
-
-	if(rotate != NULL) {
-		rotate();
-	}
-
+	rotate();
 	glutPostRedisplay();
 	glutTimerFunc(value, glut_rotation_callback, value);
 }

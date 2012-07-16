@@ -321,9 +321,7 @@ static void display(void)
 	glRotatef(angle, 0.0, 1.0, 0.0);
 	glScalef(0.25,0.25,0.25);
 	glTranslatef( 0, 0, -10 );
-
 	drawModel(model);
-	glFlush();
 }
 
 static void make_frustum( double fovy, double aspect_ratio, double front, double back )
