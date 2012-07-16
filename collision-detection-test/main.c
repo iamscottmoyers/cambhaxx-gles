@@ -562,6 +562,11 @@ static int check_collision_bb(pos_t *a, bound_t *a_bounds, pos_t *b, bound_t *b_
   GLfloat b_z_min = getMIN(b->z, b_bounds[2]);
   GLfloat b_z_max = getMAX(b->z, b_bounds[2]);
 
+  /* Calculate collisions in all planes */
+  unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
+  unsigned char y_collision = (a_y_max >= b_y_min) && (a_y_min <= b_y_max);
+  unsigned char z_collision = (a_z_max >= b_z_min) && (a_z_min <= b_z_max);
+
 #ifdef DEBUG
   printf("a:\tx:(%d, %d)\ty:(%d, %d)\tz:(%d, %d)\n",
 	 (int)a_x_min, (int)a_x_max,
@@ -571,14 +576,7 @@ static int check_collision_bb(pos_t *a, bound_t *a_bounds, pos_t *b, bound_t *b_
 	 (int)b_x_min, (int)b_x_max,
 	 (int)b_y_min, (int)b_y_max,
 	 (int)b_z_min, (int)b_z_max);
-#endif
 
-  /* Calculate collisions in all planes */
-  unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
-  unsigned char y_collision = (a_y_max >= b_y_min) && (a_y_min <= b_y_max);
-  unsigned char z_collision = (a_z_max >= b_z_min) && (a_z_min <= b_z_max);
-
-#ifdef DEBUG
   printf("x:%d y:%d z:%d\n", x_collision, y_collision, z_collision);
 #endif
 

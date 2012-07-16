@@ -1,7 +1,7 @@
 CXX := gcc
 WARNINGFLAGS := -Wall -Wextra
 CXXFLAGS := $(WARNINGFLAGS) -g --pedantic
-INCLUDE = -I../../include/
+INCLUDE = -I../include/
 
 UNAME = $(shell uname)
 ifeq ($(UNAME), Darwin)
