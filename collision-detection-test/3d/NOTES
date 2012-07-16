@@ -1,3 +1,6 @@
+*** Only testing with GLUT at the moment ***
+*** This is getting out of sync with the code in ../../src but its fine because its just stuff i'm playing with
+
 setup a simple 3d collision test
 - single view window (no rotation)
 - generate 2 objects (1 fix, 1 moving 1 "block" each timestep)
@@ -5,7 +8,7 @@ setup a simple 3d collision test
 - printout details
 - test all three dimensions
 
--- create and view bounding box around objects (need to figure how to draw wireframes in GLES)
+-- create and view bounding box around objects
 -- initally stop on bounding box collision
 -- on bounding box collision perform more finegrained checks
 
