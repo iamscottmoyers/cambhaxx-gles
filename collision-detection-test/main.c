@@ -121,12 +121,8 @@ static dude_t *createDude(const pos_t dude[], size_t size) {
 	return d;
 }
 
-#include "data/b.cotton"
-#include "data/b2.cotton"
-#include "data/gir.cotton"
-#include "data/test.cotton"
-#include "data/doob.cotton"
-#include "data/bob.cotton"
+#include "data/collision_fixed.cotton"
+#include "data/collision_moving.cotton"
 
 static void destroyModel( model_t *m )
 {
@@ -141,11 +137,11 @@ static model_t *createModel(void) {
 	model_t *m = malloc( sizeof( model_t ) );
 
 	if(m != NULL) {
-		m->fixed = createDude(dude_bob, sizeof(dude_bob));
-		m->fixed_pos.x = 15.0f; m->fixed_pos.y = 0.0f; m->fixed_pos.z = 0.0f;
+		m->fixed = createDude(collision_fixed, sizeof(collision_fixed));
+		m->fixed_pos.x = 0.0f; m->fixed_pos.y = 0.0f; m->fixed_pos.z = 0.0f;
 
-		m->moving = createDude(dude_doob, sizeof(dude_doob));
-		m->moving_pos.x = 0.0f; m->moving_pos.y = 0.0f; m->moving_pos.z = 0.0f;
+		m->moving = createDude(collision_moving, sizeof(collision_moving));
+		m->moving_pos.x = -7.0f; m->moving_pos.y = 0.0f; m->moving_pos.z = 10.0f;
 
 		if((m->fixed == NULL) || (m->moving == NULL)) {
 			destroyModel(m);
@@ -395,11 +391,11 @@ static void drawModel(model_t *m)
 */
 
 /* Initial viewpoint */
-static GLfloat _x = -7.0f;
-static GLfloat _y = -8.0f;
-static GLfloat _z = -36.0f;
-static GLfloat _r = 0.0f;
-static GLfloat _rx = 0.0f;
+static GLfloat _x = 1.0f;
+static GLfloat _y = 2.0f;
+static GLfloat _z = -16.0f;
+static GLfloat _r = 45.0f;
+static GLfloat _rx = 1.0f;
 static GLfloat _ry = 0.0f;
 static GLfloat _rz = 0.0f;
 
@@ -443,6 +439,7 @@ static void keyboard(unsigned char key, int x, int y)
     case 'I':
     case 'i':
       _rx = 1.0f;
+      _ry = _rz = 0.0f;
       _r += 45.0f;
       if(_r >= 360.0f) {
 	_r = 0.0f;
@@ -451,6 +448,7 @@ static void keyboard(unsigned char key, int x, int y)
     case 'K':
     case 'k':
       _rx = 1.0f;
+      _ry = _rz = 0.0f;
       _r -= 45.0f;
       if(_r < 0.0f) {
 	_r = 360.f + _r;
@@ -460,6 +458,7 @@ static void keyboard(unsigned char key, int x, int y)
     case 'J':
     case 'j':
       _ry = 1.0f;
+      _rx = _rz = 0.0f;
       _r += 45.0f;
       if(_r >= 360.0f) {
 	_r = 0.0f;
@@ -469,7 +468,8 @@ static void keyboard(unsigned char key, int x, int y)
     case 'L':
     case 'l':
       _ry = 1.0f;
-      _r -= 45.0f;
+      _r-= 45.0f;
+      _rx = _rz = 0.0f;
       if(_r < 0.0f) {
 	_r = 360.0f + _r;
       }
@@ -536,31 +536,31 @@ static void rotate_callback(int value)
 	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
 }
 
-#define getMIN(pos, bound) pos - (GLfloat)abs((int)bound.min)
-#define getMAX(pos, bound) pos + bound.max
+#define getMIN(pos, dude, bound) pos - (GLfloat)abs((int)dude->bounds[bound].min)
+#define getMAX(pos, dude, bound) pos + dude->bounds[bound].max
 #define DEBUG 1
 
-static int check_collision_bb(pos_t *a, bound_t *a_bounds, pos_t *b, bound_t *b_bounds)
+static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
 {
   /* Use pos_t and bounds_t to calculate where in space dudes are */
   /* Get the x,y,z max and min bounds of dudes */
-  GLfloat a_x_min = getMIN(a->x, a_bounds[0]);
-  GLfloat a_x_max = getMAX(a->x, a_bounds[0]);
+  GLfloat a_x_min = getMIN(a->x, dude_a, 0);
+  GLfloat a_x_max = getMAX(a->x, dude_a, 0);
 
-  GLfloat a_y_min = getMIN(a->y, a_bounds[1]);
-  GLfloat a_y_max = getMAX(a->y, a_bounds[1]);
+  GLfloat a_y_min = getMIN(a->y, dude_a, 1);
+  GLfloat a_y_max = getMAX(a->y, dude_a, 1);
 
-  GLfloat a_z_min = getMIN(a->z, a_bounds[2]);
-  GLfloat a_z_max = getMAX(a->z, a_bounds[2]);
+  GLfloat a_z_min = getMIN(a->z, dude_a, 2);
+  GLfloat a_z_max = getMAX(a->z, dude_a, 2);
 
-  GLfloat b_x_min = getMIN(b->x, b_bounds[0]);
-  GLfloat b_x_max = getMAX(b->x, b_bounds[0]);
+  GLfloat b_x_min = getMIN(b->x, dude_b, 0);
+  GLfloat b_x_max = getMAX(b->x, dude_b, 0);
 
-  GLfloat b_y_min = getMIN(b->y, b_bounds[1]);
-  GLfloat b_y_max = getMAX(b->y, b_bounds[1]);
+  GLfloat b_y_min = getMIN(b->y, dude_b, 1);
+  GLfloat b_y_max = getMAX(b->y, dude_b, 1);
 
-  GLfloat b_z_min = getMIN(b->z, b_bounds[2]);
-  GLfloat b_z_max = getMAX(b->z, b_bounds[2]);
+  GLfloat b_z_min = getMIN(b->z, dude_b, 2);
+  GLfloat b_z_max = getMAX(b->z, dude_b, 2);
 
   /* Calculate collisions in all planes */
   unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
@@ -584,7 +584,41 @@ static int check_collision_bb(pos_t *a, bound_t *a_bounds, pos_t *b, bound_t *b_
      otherwise just in line
   */
   if(x_collision && y_collision && z_collision) {
-    return 1;
+    printf("Bounding box collision\n");
+    /* Check at finer granualrity */
+    /* Option 1: blanket check - compare all voxels in a and b */
+    {
+      pos_t *_a = NULL, *_b = NULL;
+      unsigned int _aI = 0, _bI = 0;
+      /* For each voxel in a */
+      for(_a = &(dude_a->blocks[_aI++]); _aI <= dude_a->count; _a = &(dude_a->blocks[_aI++]) ) {
+	/*printf("x: %d, y: %d, z: %d\n", (int)(_a->x + a->x), (int)(_a->y + a->y), (int)(_a->z + a->z));*/
+
+	/* For each voxel in b */
+	for(_bI = 0, _b = &(dude_b->blocks[_bI++]); _bI <= dude_b->count; _b = &(dude_b->blocks[_bI++]) ) {
+
+	  /*printf("\tx: %d, y: %d, z: %d\n", (int)(_b->x + b->x), (int)(_b->y + b->y), (int)(_b->z + b->z));*/
+
+	  /* Check for collisions */
+	  /* Current voxel plus the current dude position */
+	  if(((_a->x + a->x) == (_b->x + b->x))
+	     &&
+	     ((_a->y + a->y) == (_b->y + b->y))
+	     &&
+	     ((_a->z + a->z) == (_b->z + b->z))) {
+	    /* Collision */
+	    printf("Voxel collision\n");
+	    return 1;
+	  }
+
+	}
+      }
+    }
+    /* Option 2: outside check - the collision will be due to a voxel on the outside of a or b */
+    /* Option 3: 1 face ouside check - if possible to get the direction of travel collision -
+       detection can be traced to a single face on each object. (All that can be seen from a certain direction)
+    */
+    return 0;
   }
   return 0;
 }
@@ -620,19 +654,25 @@ static void move_dude_callback(int value) {
       break;
     }
 #else
-    model->moving_pos.x += 2*P;
+    model->moving_pos.z -= 2*P;
 #endif
-    if(check_collision_bb(&(model->moving_pos),
-			  model->moving->dude_item.bounds,
-			  &(model->fixed_pos),
-			  model->fixed->dude_item.bounds)) {
-      printf("Bounding box collision\n");
-      /* Check at the voxel level */
+    if(check_collision(&(model->moving_pos),
+		       &(model->moving->dude_item),
+		       &(model->fixed_pos),
+		       &(model->fixed->dude_item))) {
       /* Copy previous position back to model
 	 This will be dependent on which way the dudes are being checked
        */
       memcpy((void *)&(model->moving_pos), (void *)&(before_move), sizeof(pos_t));
-      collision = 1;
+      /*collision = 1;*/
+      /* In this example move moving to another place to test */
+      if((model->moving_pos.x + 3.0f) > 8.0f) {
+	collision = 1;
+      }
+      else {
+	model->moving_pos.y = 0.0f; model->moving_pos.z = 10.0f;
+	model->moving_pos.x += 3.0f;
+      }
     }
     glutPostRedisplay();
     glutTimerFunc(1000/2, move_dude_callback, 0);
