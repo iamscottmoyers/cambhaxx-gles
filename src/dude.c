@@ -52,6 +52,9 @@ typedef struct model_t {
 
 	dude_t *doob;
 	pos_t doob_pos;
+
+  dude_t *peter;
+  pos_t peter_pos;
 } model_t;
 
 
@@ -85,6 +88,7 @@ static dude_t *createDude(const pos_t dude[], size_t size) {
 #include "data/gir.cotton"
 #include "data/test.cotton"
 #include "data/doob.cotton"
+#include "data/peter.cotton"
 
 static void destroyModel( model_t *m )
 {
@@ -94,6 +98,7 @@ static void destroyModel( model_t *m )
 		destroyDude(m->gir);
 		destroyDude(m->test);
 		destroyDude(m->doob);
+		destroyDude(m->peter);
 		free(m);
 	}
 }
@@ -116,6 +121,9 @@ static model_t *createModel(void) {
 
 		m->doob = createDude(dude_doob, sizeof(dude_doob));
 		m->doob_pos.x = 0.0f; m->doob_pos.y = 0.0f; m->doob_pos.z = 20.0f;
+
+		m->peter = createDude(petercrumb, sizeof(petercrumb));
+		m->peter_pos.x = -20.0f; m->peter_pos.y = 40.0f; m->peter_pos.z = 50.0f;
 
 		if((m->b == NULL) || (m->b2 == NULL) ||
 		   (m->gir == NULL) || (m->test == NULL) ||
@@ -309,6 +317,11 @@ static void drawModel(model_t *m)
 	glPushMatrix();
 	glTranslatef(m->doob_pos.x, m->doob_pos.y, m->doob_pos.z);
 	drawDude(m->doob);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(m->peter_pos.x, m->peter_pos.y, m->peter_pos.z);
+	drawDude(m->peter);
 	glPopMatrix();
 }
 
