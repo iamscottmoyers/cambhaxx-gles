@@ -46,5 +46,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 clean:
 	rm -rf $(EXEC) $(OBJDIR)
 
+distclean:
+	rm -rf *~ */*~ $(EXEC) $(OBJDIR)
+
 build-obj-store:
 	-mkdir -p $(OBJDIR)
