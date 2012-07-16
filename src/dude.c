@@ -53,8 +53,8 @@ typedef struct model_t {
 	dude_t *doob;
 	pos_t doob_pos;
 
-  dude_t *peter;
-  pos_t peter_pos;
+	dude_t *peter;
+	pos_t peter_pos;
 } model_t;
 
 

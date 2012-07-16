@@ -20,7 +20,6 @@ endif
 
 # Use as: make USE_GTK=1
 ifdef USE_GTK
-COMPILE_FLAGS += -DUSE_GTK
 OPENGL_FLAGS = $(shell pkg-config --libs gtk+-2.0 gtkglext-1.0 gtkglext-x11-1.0)
 CXXFLAGS += $(shell pkg-config --cflags gtk+-2.0 gtkglext-1.0 gtkglext-x11-1.0)
 SRCS = $(SRCDIR)/window_system_gtk.c
