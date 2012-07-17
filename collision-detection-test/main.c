@@ -296,27 +296,27 @@ static void drawCubeVariable(GLfloat x_min, GLfloat x_max, GLfloat y_min, GLfloa
   glVertex3f(x_min,y_max,z_max);
   glVertex3f(x_min,y_min,z_max);
   glVertex3f(x_max,y_min,z_max);
- 
+
   glVertex3f(x_max,y_max,z_min);
   glVertex3f(x_min,y_max,z_min);
   glVertex3f(x_min,y_min,z_min);
   glVertex3f(x_max,y_min,z_min);
- 
+
   glVertex3f(x_max,y_max,z_max);
   glVertex3f(x_max,y_min,z_max);
   glVertex3f(x_max,y_min,z_min);
   glVertex3f(x_max,y_max,z_min);
- 
+
   glVertex3f(x_min,y_max,z_max);
   glVertex3f(x_min,y_min,z_max);
   glVertex3f(x_min,y_min,z_min);
   glVertex3f(x_min,y_max,z_min);
- 
+
   glVertex3f(x_max,y_max,z_max);
   glVertex3f(x_min,y_max,z_max);
   glVertex3f(x_min,y_max,z_min);
   glVertex3f(x_max,y_max,z_min);
- 
+
   glVertex3f(x_max,y_min,z_max);
   glVertex3f(x_min,y_min,z_max);
   glVertex3f(x_min,y_min,z_min);
@@ -562,6 +562,13 @@ static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
   GLfloat b_z_min = getMIN(b->z, dude_b, 2);
   GLfloat b_z_max = getMAX(b->z, dude_b, 2);
 
+#if 0
+  /* work out size of dude b */
+  printf("x: %d\n", (int)(b_x_max - b_x_min) + 1);
+  printf("y: %d\n", (int)(b_y_max - b_y_min) + 1);
+  printf("z: %d\n", (int)(b_z_max - b_z_min) + 1);
+#endif
+
   /* Calculate collisions in all planes */
   unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
   unsigned char y_collision = (a_y_max >= b_y_min) && (a_y_min <= b_y_max);
@@ -586,6 +593,9 @@ static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
   if(x_collision && y_collision && z_collision) {
     printf("Bounding box collision\n");
     /* Check at finer granualrity */
+#define OPTION2
+
+#ifdef OPTION1
     /* Option 1: blanket check - compare all voxels in a and b */
     {
       pos_t *_a = NULL, *_b = NULL;
@@ -610,14 +620,61 @@ static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
 	    printf("Voxel collision\n");
 	    return 1;
 	  }
-
 	}
       }
     }
-    /* Option 2: outside check - the collision will be due to a voxel on the outside of a or b */
-    /* Option 3: 1 face ouside check - if possible to get the direction of travel collision -
-       detection can be traced to a single face on each object. (All that can be seen from a certain direction)
-    */
+#elif defined OPTION2
+    /* Option 2: */
+    {
+      unsigned char *dude_a_collision = NULL;
+
+      /* work out size of dude a */
+      int x_size = (int)(a_x_max - a_x_min) + 1;
+      int y_size = (int)(a_y_max - a_y_min) + 1;
+      int z_size = (int)(a_z_max - a_z_min) + 1;
+
+      pos_t *p = NULL;
+      unsigned int i = 0;
+
+      /* Allocate space */
+      if((dude_a_collision = (unsigned char *)calloc((x_size * y_size * z_size), 1)) == NULL) {
+	fprintf(stderr, "Unable to allocate memory: dude_a_collision\n");
+	exit(-1);
+      }
+      /* dude_a_collision being used as [z][y][x] */
+
+      /* Fill in map of voxels in dude a */
+      /* This required normalising the positions relative to a point where all values
+	 end up starting from zero. Using the min bounds for this.
+      */
+      for(p = &(dude_a->blocks[i++]); i <= dude_a->count; p = &(dude_a->blocks[i++]) ) {
+	dude_a_collision[(int)((p->x - dude_a->bounds[0].min) +
+			       ((p->y - dude_a->bounds[1].min) * x_size) +
+			       ((p->z - dude_a->bounds[2].min) * y_size * x_size))] = 1;
+      }
+
+      /* Check against dude b */
+      /* Need to translate dude b voxels in relation to the point used in above step
+	 (voxel offset + center point(b)) - (center point(a) + point of reference)
+      */
+
+      for(i = 0, p = &(dude_b->blocks[i++]); i <= dude_b->count; p = &(dude_b->blocks[i++]) ) {
+	int x = (int)((p->x + b->x) - (a->x + dude_a->bounds[0].min));
+	int y = (int)((p->y + b->y) - (a->y + dude_a->bounds[1].min));
+	int z = (int)((p->z + b->z) - (a->z + dude_a->bounds[2].min));
+	if( ((x >= 0) && (x < x_size)) && ((y >= 0) && (y < y_size)) && ((z >= 0) && (z < z_size)) ) {
+	  if(dude_a_collision[(x + (y * x_size) + (z * y_size * x_size))]) {
+	    printf("Voxel collision\n");
+	    free(dude_a_collision);
+	    return 1;
+	  }
+	}
+      }
+      free(dude_a_collision);
+    }
+#else
+#error "You need to specify a collision check"
+#endif
     return 0;
   }
   return 0;
