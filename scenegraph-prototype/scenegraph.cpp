@@ -107,18 +107,16 @@ static bool acyclic(SceneGraphNode *node)
 
 void SceneGraphNode::addChild(SceneGraphNode *child)
 {
+	assert((m_children.find(child) == m_children.end()) && "'child' is already a child of this node. "
+	       "This is a redundant operation so is probably not what you intended." );
 	child->retain();
-	m_children.push_back(child);
+	m_children.insert(child);
 	assert(acyclic(child) && "addChild() created a cycle in the scene graph.");
 }
 
 void SceneGraphNode::removeChild(SceneGraphNode *child)
 {
-	// Note: This implementation of removeChild requires the STL to search through
-	// the children list to find and remove child. It might be possible to optimise
-	// this if we tend to have access to the iterator for the child we're removing
-	// before calling this function.
-	m_children.remove(child);
+	m_children.erase(child);
 	child->release();
 }
 

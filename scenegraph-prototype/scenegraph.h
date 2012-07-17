@@ -1,7 +1,7 @@
 #ifndef SCENEGRAPH_H
 #define SCENEGRAPH_H
 
-#include <list>
+#include <set>
 
 /// @brief A type for each node
 typedef enum SceneGraphNodeType {
@@ -19,11 +19,11 @@ typedef enum SceneGraphNodeType {
 class SceneGraphNode {
 private:
 	SceneGraphNodeType m_type;
-	std::list<SceneGraphNode *> m_children;
+	std::set<SceneGraphNode *> m_children;
 	int m_refcount;
 public:
-	// Iterator for traversing the child list
-	typedef std::list<SceneGraphNode *>::iterator iterator;
+	// Iterator for traversing the child set
+	typedef std::set<SceneGraphNode *>::iterator iterator;
 	iterator begin(void);
 	iterator end(void);
 
