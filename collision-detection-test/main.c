@@ -49,27 +49,89 @@ typedef struct pos_t {
 } pos_t;
 
 typedef struct bound_t {
-  GLfloat max, min;
+	GLfloat max, min;
 } bound_t;
 
 typedef struct item_t {
 	unsigned int count;
 	pos_t *blocks;
-  bound_t bounds[3];
+	bound_t bounds[3];
 } item_t;
+
+typedef struct dir_t {
+	GLfloat xy; /* Angle between x and y planes */
+	GLfloat xz; /* Angle between x and z planes */
+} dir_t;
+
+typedef struct animx_t {
+	dir_t direction;
+	GLfloat speed;
+} anim_t;
 
 typedef struct dude_t {
 	item_t dude_item;
+	pos_t position;
+	anim_t animation;
 } dude_t;
 
-typedef struct model_t {
-  dude_t *fixed;
-  pos_t fixed_pos;
+typedef struct dudes_t {
+	dude_t* dude;
+	struct dudes_t *next;
+} dudes_t;
 
-  dude_t *moving;
-  pos_t moving_pos;
+typedef struct model_t {
+	dudes_t *dudes;
 } model_t;
 
+/* Simple Linked List to Add and Remove dudes_t */
+dudes_t *addDude(dudes_t *l, dude_t *d)
+{
+	dudes_t *n = (dudes_t *)calloc(1, sizeof(dudes_t));
+	n->dude = d;
+	n->next = NULL;
+	if(l == NULL) {
+		return n;
+	}
+	else {
+		dudes_t *u = l;
+		while(u->next != NULL) {
+			u = u->next;
+		}
+		u->next = n;
+		return l;
+	}
+	return NULL;
+}
+
+dudes_t *removeDude(dudes_t *l, dude_t *d)
+{
+	if(l == NULL) {
+		return NULL;
+	}
+	else {
+		dudes_t *n = l;
+		dudes_t *p = NULL;
+		do {
+			if(n->dude == d) {
+				if(n != l) {
+					p->next = n->next;
+					free(n);
+					return l;
+				}
+				else {
+					l = n->next;
+					free(n);
+					return l;
+				}
+			}
+			p = n;
+			n = n->next;
+		} while(n != NULL);
+			
+	}
+	assert(0 && "Didn't find dude to remove from linked list...");
+	return l;
+}
 
 static void destroyDude( dude_t *d )
 {
@@ -79,7 +141,7 @@ static void destroyDude( dude_t *d )
 	}
 }
 
-static dude_t *createDude(const pos_t dude[], size_t size) {
+static dude_t *createDude(const pos_t dude[], size_t size, pos_t *position, anim_t *animation) {
 
 	dude_t *d = (dude_t *)calloc(1, sizeof(dude_t));
 	if(d == NULL) {
@@ -92,6 +154,9 @@ static dude_t *createDude(const pos_t dude[], size_t size) {
 	}
 	d->dude_item.count = size / sizeof(pos_t);
 	memcpy(d->dude_item.blocks, dude, size);
+
+	memcpy(&(d->position), position, sizeof(pos_t));
+	memcpy(&(d->animation), animation, sizeof(anim_t));
 
 	/* calculate bounds box */
 	{
@@ -126,26 +191,39 @@ static dude_t *createDude(const pos_t dude[], size_t size) {
 
 static void destroyModel( model_t *m )
 {
-	if(m != NULL) {
-		destroyDude(m->fixed);
-		destroyDude(m->moving);
-		free(m);
+	dudes_t *ds = m->dudes;
+	while(ds) {
+		dudes_t *dn = ds->next;
+		destroyDude(ds->dude);
+		ds = dn;
 	}
+	free(m);
 }
 
 static model_t *createModel(void) {
-	model_t *m = malloc( sizeof( model_t ) );
-
+	model_t *m = calloc(1,  sizeof( model_t ) );
 	if(m != NULL) {
-		m->fixed = createDude(collision_fixed, sizeof(collision_fixed));
-		m->fixed_pos.x = 0.0f; m->fixed_pos.y = 0.0f; m->fixed_pos.z = 0.0f;
-
-		m->moving = createDude(collision_moving, sizeof(collision_moving));
-		m->moving_pos.x = -7.0f; m->moving_pos.y = 0.0f; m->moving_pos.z = 10.0f;
-
-		if((m->fixed == NULL) || (m->moving == NULL)) {
-			destroyModel(m);
-			m = NULL;
+		{
+			pos_t pos = {0.0f, 0.0f, 0.0f, {255, 0, 0, 1}};
+			anim_t anim = {{0.0f, 0.0f}, 1.0f};
+			dude_t *d = createDude(collision_fixed, sizeof(collision_fixed), &pos, &anim);
+			if(d != NULL) {
+				m->dudes = addDude(m->dudes, d);
+			}
+			else {
+				fprintf(stderr, "Error creating dude (fixed)\n");
+			}
+		}
+		{
+			pos_t pos = {-7.0f, 0.0f, 10.0f, {255, 0, 0, 1}};
+			anim_t anim = {{0.0f, 0.0f}, 1.0f};
+			dude_t *d = createDude(collision_moving, sizeof(collision_moving), &pos, &anim);
+			if(d != NULL) {
+				m->dudes = addDude(m->dudes, d);
+			}
+			else {
+				fprintf(stderr, "Error creating dude (moving)\n");
+			}
 		}
 	}
 
@@ -348,42 +426,28 @@ static void drawDude(dude_t *d)
 
 static void drawModel(model_t *m)
 {
-	glPushMatrix();
-	glTranslatef(m->fixed_pos.x, m->fixed_pos.y, m->fixed_pos.z);
-	drawDude(m->fixed);
-	/* draw a wireframe around m->fixed */
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /* line mode */
-	{
-	  /* use bounds[] to create a wireframe around the object */
-	  dude_t *d = m->fixed;
-	  drawCubeVariable(d->dude_item.bounds[0].min-P,
-			   d->dude_item.bounds[0].max+P,
-			   d->dude_item.bounds[1].min-P,
-			   d->dude_item.bounds[1].max+P,
-			   d->dude_item.bounds[2].min-P,
-			   d->dude_item.bounds[2].max+P);
-	}
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); /* fill mode */
-	glPopMatrix();
+	/* draw each dude from dudes */
+	dudes_t *ds = m->dudes;
+	while(ds) {
+		glPushMatrix();
+		glTranslatef(ds->dude->position.x, ds->dude->position.y, ds->dude->position.z);
+		drawDude(ds->dude);
+		/* draw a wireframe around m->fixed */
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /* line mode */
+		{
+			/* use bounds[] to create a wireframe around the object */
+			drawCubeVariable(ds->dude->dude_item.bounds[0].min-P,
+			                 ds->dude->dude_item.bounds[0].max+P,
+			                 ds->dude->dude_item.bounds[1].min-P,
+			                 ds->dude->dude_item.bounds[1].max+P,
+			                 ds->dude->dude_item.bounds[2].min-P,
+			                 ds->dude->dude_item.bounds[2].max+P);
+		}
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); /* fill mode */
+		glPopMatrix();
 
-
-	glPushMatrix();
-	glTranslatef(m->moving_pos.x, m->moving_pos.y, m->moving_pos.z);
-	drawDude(m->moving);
-	/* draw a wireframe around m->moving */
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); /* line mode */
-	{
-	  /* use bounds[] to create a wireframe around the object */
-	  dude_t *d = m->moving;
-	  drawCubeVariable(d->dude_item.bounds[0].min-P,
-			   d->dude_item.bounds[0].max+P,
-			   d->dude_item.bounds[1].min-P,
-			   d->dude_item.bounds[1].max+P,
-			   d->dude_item.bounds[2].min-P,
-			   d->dude_item.bounds[2].max+P);
+		ds = ds->next;
 	}
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); /* fill mode */
-	glPopMatrix();
 }
 
 /* Basic alteration of view of dudes
@@ -682,6 +746,7 @@ static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
 
 /* just move the model->moving object in the x plane */
 static void move_dude_callback(int value) {
+#if 0
   static int collision = 0;
   pos_t before_move = model->moving_pos;
   UNUSED( value );
@@ -734,6 +799,7 @@ static void move_dude_callback(int value) {
     glutPostRedisplay();
     glutTimerFunc(1000/2, move_dude_callback, 0);
   }
+#endif
 }
 #endif
 
