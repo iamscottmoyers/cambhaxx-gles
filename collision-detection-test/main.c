@@ -35,6 +35,8 @@
 #define DEFAULT_WIN_HEIGHT (600)
 /** The rotation speed */
 #define ROTATION_SPEED_MS (1000/60)
+/** The maximum voxel per second speed **/
+#define MAX_MOVEMENT_SPEED 1
 
 /* rotation value */
 static GLfloat angle = 0.0;
@@ -63,7 +65,7 @@ typedef struct dir_t {
 	GLfloat xz; /* Angle between x and z planes */
 } dir_t;
 
-typedef struct animx_t {
+typedef struct anim_t {
 	dir_t direction;
 	GLfloat speed;
 } anim_t;
@@ -216,7 +218,7 @@ static model_t *createModel(void) {
 		}
 		{
 			pos_t pos = {-7.0f, 0.0f, 10.0f, {255, 0, 0, 1}};
-			anim_t anim = {{0.0f, 0.0f}, 1.0f};
+			anim_t anim = {{0.0f, 0.0f}, 2.0f};
 			dude_t *d = createDude(collision_moving, sizeof(collision_moving), &pos, &anim);
 			if(d != NULL) {
 				m->dudes = addDude(m->dudes, d);
@@ -600,152 +602,201 @@ static void rotate_callback(int value)
 	glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );
 }
 
-#define getMIN(pos, dude, bound) pos - (GLfloat)abs((int)dude->bounds[bound].min)
-#define getMAX(pos, dude, bound) pos + dude->bounds[bound].max
+#define getMIN(dude, plane, bound) dude->position.plane - (GLfloat)abs((int)dude->dude_item.bounds[bound].min)
+#define getMAX(dude, plane, bound) dude->position.plane + dude->dude_item.bounds[bound].max
 #define DEBUG 1
 
-static int check_collision(pos_t *a, item_t *dude_a, pos_t *b, item_t *dude_b)
+static int check_collision(dude_t *a, dude_t *b)
 {
-  /* Use pos_t and bounds_t to calculate where in space dudes are */
-  /* Get the x,y,z max and min bounds of dudes */
-  GLfloat a_x_min = getMIN(a->x, dude_a, 0);
-  GLfloat a_x_max = getMAX(a->x, dude_a, 0);
+	/* Use pos_t and bounds_t to calculate where in space dudes are */
+	/* Get the x,y,z max and min bounds of dudes */
+	GLfloat a_x_min = getMIN(a, x, 0);
+	GLfloat a_x_max = getMAX(a, x, 0);
 
-  GLfloat a_y_min = getMIN(a->y, dude_a, 1);
-  GLfloat a_y_max = getMAX(a->y, dude_a, 1);
+	GLfloat a_y_min = getMIN(a, y, 1);
+	GLfloat a_y_max = getMAX(a, y, 1);
 
-  GLfloat a_z_min = getMIN(a->z, dude_a, 2);
-  GLfloat a_z_max = getMAX(a->z, dude_a, 2);
+	GLfloat a_z_min = getMIN(a, z, 2);
+	GLfloat a_z_max = getMAX(a, z, 2);
 
-  GLfloat b_x_min = getMIN(b->x, dude_b, 0);
-  GLfloat b_x_max = getMAX(b->x, dude_b, 0);
+	GLfloat b_x_min = getMIN(b, x, 0);
+	GLfloat b_x_max = getMAX(b, x, 0);
 
-  GLfloat b_y_min = getMIN(b->y, dude_b, 1);
-  GLfloat b_y_max = getMAX(b->y, dude_b, 1);
+	GLfloat b_y_min = getMIN(b, y, 1);
+	GLfloat b_y_max = getMAX(b, y, 1);
 
-  GLfloat b_z_min = getMIN(b->z, dude_b, 2);
-  GLfloat b_z_max = getMAX(b->z, dude_b, 2);
+	GLfloat b_z_min = getMIN(b, z, 2);
+	GLfloat b_z_max = getMAX(b, z, 2);
 
-#if 0
-  /* work out size of dude b */
-  printf("x: %d\n", (int)(b_x_max - b_x_min) + 1);
-  printf("y: %d\n", (int)(b_y_max - b_y_min) + 1);
-  printf("z: %d\n", (int)(b_z_max - b_z_min) + 1);
-#endif
-
-  /* Calculate collisions in all planes */
-  unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
-  unsigned char y_collision = (a_y_max >= b_y_min) && (a_y_min <= b_y_max);
-  unsigned char z_collision = (a_z_max >= b_z_min) && (a_z_min <= b_z_max);
+	/* Calculate collisions in all planes */
+	unsigned char x_collision = (a_x_max >= b_x_min) && (a_x_min <= b_x_max);
+	unsigned char y_collision = (a_y_max >= b_y_min) && (a_y_min <= b_y_max);
+	unsigned char z_collision = (a_z_max >= b_z_min) && (a_z_min <= b_z_max);
 
 #ifdef DEBUG
-  printf("a:\tx:(%d, %d)\ty:(%d, %d)\tz:(%d, %d)\n",
-	 (int)a_x_min, (int)a_x_max,
-	 (int)a_y_min, (int)a_y_max,
-	 (int)a_z_min, (int)a_z_max);
-  printf("b:\tx:(%d, %d)\ty:(%d, %d)\tz:(%d, %d)\n",
-	 (int)b_x_min, (int)b_x_max,
-	 (int)b_y_min, (int)b_y_max,
-	 (int)b_z_min, (int)b_z_max);
+	printf("a:\tx:(%d, %d)\ty:(%d, %d)\tz:(%d, %d)\n",
+	       (int)a_x_min, (int)a_x_max,
+	       (int)a_y_min, (int)a_y_max,
+	       (int)a_z_min, (int)a_z_max);
+	printf("b:\tx:(%d, %d)\ty:(%d, %d)\tz:(%d, %d)\n",
+	       (int)b_x_min, (int)b_x_max,
+	       (int)b_y_min, (int)b_y_max,
+	       (int)b_z_min, (int)b_z_max);
 
-  printf("x:%d y:%d z:%d\n", x_collision, y_collision, z_collision);
+	printf("x:%d y:%d z:%d\n", x_collision, y_collision, z_collision);
 #endif
 
-  /* Collision only if all planes show collisions,
-     otherwise just in line
-  */
-  if(x_collision && y_collision && z_collision) {
-    printf("Bounding box collision\n");
-    /* Check at finer granualrity */
+	/* Collision only if all planes show collisions,
+	   otherwise just in line
+	*/
+	if(x_collision && y_collision && z_collision) {
+		printf("Bounding box collision\n");
+		/* Check at finer granualrity */
 #define OPTION2
 
 #ifdef OPTION1
-    /* Option 1: blanket check - compare all voxels in a and b */
-    {
-      pos_t *_a = NULL, *_b = NULL;
-      unsigned int _aI = 0, _bI = 0;
-      /* For each voxel in a */
-      for(_a = &(dude_a->blocks[_aI++]); _aI <= dude_a->count; _a = &(dude_a->blocks[_aI++]) ) {
-	/*printf("x: %d, y: %d, z: %d\n", (int)(_a->x + a->x), (int)(_a->y + a->y), (int)(_a->z + a->z));*/
+		/* Option 1: blanket check - compare all voxels in a and b */
+		{
+			pos_t *_a = NULL, *_b = NULL;
+			unsigned int _aI = 0, _bI = 0;
+			/* For each voxel in a */
+			for(_a = &(a->dude_item.blocks[_aI++]); _aI <= a->dude_item.count; _a = &(a->dude_item.blocks[_aI++]) ) {
 
-	/* For each voxel in b */
-	for(_bI = 0, _b = &(dude_b->blocks[_bI++]); _bI <= dude_b->count; _b = &(dude_b->blocks[_bI++]) ) {
-
-	  /*printf("\tx: %d, y: %d, z: %d\n", (int)(_b->x + b->x), (int)(_b->y + b->y), (int)(_b->z + b->z));*/
-
-	  /* Check for collisions */
-	  /* Current voxel plus the current dude position */
-	  if(((_a->x + a->x) == (_b->x + b->x))
-	     &&
-	     ((_a->y + a->y) == (_b->y + b->y))
-	     &&
-	     ((_a->z + a->z) == (_b->z + b->z))) {
-	    /* Collision */
-	    printf("Voxel collision\n");
-	    return 1;
-	  }
-	}
-      }
-    }
+				/* For each voxel in b */
+				for(_bI = 0, _b = &(b->dude_item.blocks[_bI++]); _bI <= b->dude_item.count; _b = &(b->dude_item.blocks[_bI++]) ) {
+					
+					/* Check for collisions */
+					/* Current voxel plus the current dude position */
+					if(((_a->x + a->position.x) == (_b->x + b->position.x))
+					   &&
+					   ((_a->y + a->position.y) == (_b->y + b->position.y))
+					   &&
+					   ((_a->z + a->position.z) == (_b->z + b->position.z))) {
+						/* Collision */
+						printf("Voxel collision\n");
+						return 1;
+					}
+				}
+			}
+		}
 #elif defined OPTION2
-    /* Option 2: */
-    {
-      unsigned char *dude_a_collision = NULL;
-
-      /* work out size of dude a */
-      int x_size = (int)(a_x_max - a_x_min) + 1;
-      int y_size = (int)(a_y_max - a_y_min) + 1;
-      int z_size = (int)(a_z_max - a_z_min) + 1;
-
-      pos_t *p = NULL;
-      unsigned int i = 0;
-
-      /* Allocate space */
-      if((dude_a_collision = (unsigned char *)calloc((x_size * y_size * z_size), 1)) == NULL) {
-	fprintf(stderr, "Unable to allocate memory: dude_a_collision\n");
-	exit(-1);
-      }
-      /* dude_a_collision being used as [z][y][x] */
-
-      /* Fill in map of voxels in dude a */
-      /* This required normalising the positions relative to a point where all values
-	 end up starting from zero. Using the min bounds for this.
-      */
-      for(p = &(dude_a->blocks[i++]); i <= dude_a->count; p = &(dude_a->blocks[i++]) ) {
-	dude_a_collision[(int)((p->x - dude_a->bounds[0].min) +
-			       ((p->y - dude_a->bounds[1].min) * x_size) +
-			       ((p->z - dude_a->bounds[2].min) * y_size * x_size))] = 1;
-      }
-
-      /* Check against dude b */
-      /* Need to translate dude b voxels in relation to the point used in above step
-	 (voxel offset + center point(b)) - (center point(a) + point of reference)
-      */
-
-      for(i = 0, p = &(dude_b->blocks[i++]); i <= dude_b->count; p = &(dude_b->blocks[i++]) ) {
-	int x = (int)((p->x + b->x) - (a->x + dude_a->bounds[0].min));
-	int y = (int)((p->y + b->y) - (a->y + dude_a->bounds[1].min));
-	int z = (int)((p->z + b->z) - (a->z + dude_a->bounds[2].min));
-	if( ((x >= 0) && (x < x_size)) && ((y >= 0) && (y < y_size)) && ((z >= 0) && (z < z_size)) ) {
-	  if(dude_a_collision[(x + (y * x_size) + (z * y_size * x_size))]) {
-	    printf("Voxel collision\n");
-	    free(dude_a_collision);
-	    return 1;
-	  }
-	}
-      }
-      free(dude_a_collision);
-    }
+		/* Option 2: */
+		{
+			unsigned char *dude_a_collision = NULL;
+			
+			/* work out size of dude a */
+			int x_size = (int)(a_x_max - a_x_min) + 1;
+			int y_size = (int)(a_y_max - a_y_min) + 1;
+			int z_size = (int)(a_z_max - a_z_min) + 1;
+			
+			pos_t *p = NULL;
+			unsigned int i = 0;
+			
+			/* Allocate space */
+			if((dude_a_collision = (unsigned char *)calloc((x_size * y_size * z_size), 1)) == NULL) {
+				fprintf(stderr, "Unable to allocate memory: dude_a_collision\n");
+				exit(-1);
+			}
+			/* dude_a_collision being used as [z][y][x] */
+			
+			/* Fill in map of voxels in dude a */
+			/* This required normalising the positions relative to a point where all values
+			   end up starting from zero. Using the min bounds for this.
+			*/
+			for(p = &(a->dude_item.blocks[i++]); i <= a->dude_item.count; p = &(a->dude_item.blocks[i++]) ) {
+				dude_a_collision[(int)((p->x - a->dude_item.bounds[0].min) +
+				                       ((p->y - a->dude_item.bounds[1].min) * x_size) +
+				                       ((p->z - a->dude_item.bounds[2].min) * y_size * x_size))] = 1;
+			}
+			
+			/* Check against dude b */
+			/* Need to translate dude b voxels in relation to the point used in above step
+			   (voxel offset + center point(b)) - (center point(a) + point of reference)
+			*/
+			
+			for(i = 0, p = &(b->dude_item.blocks[i++]); i <= b->dude_item.count; p = &(b->dude_item.blocks[i++]) ) {
+				int x = (int)((p->x + b->position.x) - (a->position.x + a->dude_item.bounds[0].min));
+				int y = (int)((p->y + b->position.y) - (a->position.y + a->dude_item.bounds[1].min));
+				int z = (int)((p->z + b->position.z) - (a->position.z + a->dude_item.bounds[2].min));
+				if( ((x >= 0) && (x < x_size)) && ((y >= 0) && (y < y_size)) && ((z >= 0) && (z < z_size)) ) {
+					if(dude_a_collision[(x + (y * x_size) + (z * y_size * x_size))]) {
+						printf("Voxel collision\n");
+						free(dude_a_collision);
+						return 1;
+					}
+				}
+			}
+			free(dude_a_collision);
+		}
 #else
 #error "You need to specify a collision check"
 #endif
-    return 0;
-  }
-  return 0;
+		return 0;
+	}
+	return 0;
 }
 
-/* just move the model->moving object in the x plane */
-static void move_dude_callback(int value) {
+/* Move each dude depending on their speed and direction attributes */
+static void move_dude_callback(int value)
+{
+	/* Used to determine if a dude should move this iteration */
+	static int timestep = 0;
+	/* Only update the screen if any item has moved */
+	int moved = 0;
+
+	/* Loop through dudes */
+	dudes_t *ds = model->dudes;
+
+	UNUSED( value );
+
+	/* After writing this i realised that it shouldn't quite work this way
+	   Each dude should be moved, and then a collision check should be made
+	   In the current implementation if two items are moving at the same speed in the same
+	   direction 1 voxel apart, depeding on the order they are draw there would be different outcome
+	 */
+
+	/* TODO: figure out how to animate different speeds */
+	while(ds) {
+		if(ds->dude->animation.speed != 0.0f) {
+			dudes_t *coll = NULL;
+
+			/* Create a copy of the current position */
+			pos_t curr;
+			memcpy(&curr, &(ds->dude->position), sizeof(pos_t));
+
+			/* Move in the direction of travel */
+			/* TODO: workout direction of travel using animation.direction */
+			/* TODO: workout smothly moving the items */
+			ds->dude->position.z -= (2*P * ds->dude->animation.speed);
+
+			/* Then check collisions with each other dude */
+			coll = model->dudes;
+			while(coll) {
+				if(coll->dude != ds->dude) {
+					if(check_collision(ds->dude, coll->dude)) {
+						/* Can't move because of a collision */
+						memcpy(&(ds->dude->position), &curr, sizeof(pos_t));
+						/* Stop movement */
+						ds->dude->animation.speed = 0.0f;
+						break;
+					}
+					else {
+						moved = 1;
+					}
+				}
+				coll = coll->next;
+			}
+		}
+		ds = ds->next;
+	}
+
+	if(++timestep >= MAX_MOVEMENT_SPEED) {
+		timestep = 0;
+	}
+	if(moved) {
+		glutPostRedisplay();
+	}
+	glutTimerFunc(1000/MAX_MOVEMENT_SPEED, move_dude_callback, 0);
 #if 0
   static int collision = 0;
   pos_t before_move = model->moving_pos;
@@ -797,7 +848,7 @@ static void move_dude_callback(int value) {
       }
     }
     glutPostRedisplay();
-    glutTimerFunc(1000/2, move_dude_callback, 0);
+    glutTimerFunc(1000/MAX_MOVEMENT_SPEED, move_dude_callback, 0);
   }
 #endif
 }
@@ -943,9 +994,7 @@ int main(int argc, char * argv[])
 	glutReshapeFunc(reshape);
 	/* turned rotation off */
 	/*glutTimerFunc(ROTATION_SPEED_MS, rotate_callback, 0 );*/
-	/* move m->moving */
-	srand(2);
-	glutTimerFunc(1000/2, move_dude_callback, 0);
+	glutTimerFunc(1000/MAX_MOVEMENT_SPEED, move_dude_callback, 0);
 #endif
 
 	glEnable(GL_DEPTH_TEST);
